@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartCal</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+    <!-- ---------only for card symbols---------- -->
+    <svg style="display: none;">
+        <symbol id="check-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path d="M21.801 10A10 10 0 1 1 17 3.335"></path>
+            <path d="m9 11 3 3L22 4"></path>
+        </symbol>
+    </svg>
+
+    <nav>
+        <div class="left">
+            <img src="Assets/logo.png" alt="">
+            <h2>SmartCal</h2>
+        </div>
+
+        <div class="right">
+            <button id="signIn">Sign In</button>
+            <button id="getStarted" class="blackBtn">Get Started</button>
+
+        </div>
+    </nav>
+
+    <div class="home">
+        <p id="firstPara">Now with AI-powered scheduling</p>
+        <h1>Smart Calendar <span>Booking System</span></h1>
+        <p id="SecondPara">Streamline your scheduling with our intelligent calendar booking platform. Perfect for <br>
+            professionals, teams,
+            and businesses of all sizes.</p>
+        <div class="homeButtons">
+            <button id="homeBtn1" class="blackBtn">Start Free Trial <svg class="arrow-icon"
+                    xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24">
+                    <path stroke="currentColor" stroke-width="2" d="M5 12h14m0 0l-5-5m5 5l-5 5" />
+                </svg></button>
+            <button id="homeBtn2">Watch Demo</button>
+        </div>
+    </div>
+
+    <div class="page2">
+        <h2>Everything you need to manage your calendar</h2>
+        <p>From simple booking pages to advanced team scheduling, we've got you covered.</p>
+
+        <div class="cards">
+            <div class="card">
+                <div class="upper">
+                    <img src="Assets/logo.png" alt="">
+                    <h3>Smart Scheduling</h3>
+                    <p>AI-powered scheduling that finds the perfect time for everyone</p>
+                </div>
+
+                <div class="lower">
+                    <ul>
+                        <li>
+                            <svg width="18" height="18" stroke="#22c55e">
+                                <use xlink:href="#check-icon" />
+                            </svg> &nbsp; &nbsp;Multiple calendar sync
+                        </li>
+                        <li class="liMargin">
+                            <svg width="18" height="18" stroke="#22c55e">
+                                <use xlink:href="#check-icon" />
+                            </svg> &nbsp; &nbsp;Automatic conflict detection
+                        </li>
+                        <li class="liMargin">
+                            <svg width="18" height="18" stroke="#22c55e">
+                                <use xlink:href="#check-icon" />
+                            </svg> &nbsp; &nbsp;Time zone optimization
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="upper">
+                    <!-- Clock -->
+                    <img src="Assets/clock.png" alt="">
+                    <h3>Flexible Booking</h3>
+                    <p>Create custom booking pages with your availability preferences</p>
+                </div>
+
+                <div class="lower">
+                    <ul>
+                        <li>
+                            <svg width="18" height="18" stroke="#22c55e">
+                                <use xlink:href="#check-icon" />
+                            </svg> &nbsp; &nbsp;Custom booking pages
+                        </li>
+                        <li class="liMargin">
+                            <svg width="18" height="18" stroke="#22c55e">
+                                <use xlink:href="#check-icon" />
+                            </svg> &nbsp; &nbsp;Buffer time settings
+                        </li>
+                        <li class="liMargin">
+                            <svg width="18" height="18" stroke="#22c55e">
+                                <use xlink:href="#check-icon" />
+                            </svg> &nbsp; &nbsp;Meeting preferences
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="upper">
+                    <!-- Users -->
+                    <img src="Assets/team.png" alt="">
+                    <h3>Team Collaboration</h3>
+                    <p>Manage team schedules and coordinate group meetings effortlessly</p>
+                </div>
+
+                <div class="lower">
+                    <ul>
+                        <li>
+                            <svg width="18" height="18" stroke="#22c55e">
+                                <use xlink:href="#check-icon" />
+                            </svg> &nbsp; &nbsp;Team scheduling
+                        </li>
+                        <li class="liMargin">
+                            <svg width="18" height="18" stroke="#22c55e">
+                                <use xlink:href="#check-icon" />
+                            </svg> &nbsp; &nbsp;Group availability
+                        </li>
+                        <li class="liMargin">
+                            <svg width="18" height="18" stroke="#22c55e">
+                                <use xlink:href="#check-icon" />
+                            </svg> &nbsp; &nbsp;Permission management
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <div class="page3">
+        <h2>Simple, transparent pricing</h2>
+        <p id="mainPara">Choose the plan that's right for you and your team</p>
+
+        <div class="priceCards">
+            <div class="pricecard">
+                <h3>Free</h3>
+                <p>Perfect for getting started</p>
+                <h1>$0 <span>/month</span></h1>
+                <ul>
+                    <li>
+                        <svg width="18" height="18" stroke="#22c55e">
+                            <use xlink:href="#check-icon" />
+                        </svg> &nbsp; &nbsp;3 calendars max
+                    </li>
+                    <li class="liMargin">
+                        <svg width="18" height="18" stroke="#22c55e">
+                            <use xlink:href="#check-icon" />
+                        </svg> &nbsp; &nbsp;3 booking agendas
+                    </li>
+                    <li class="liMargin">
+                        <svg width="18" height="18" stroke="#22c55e">
+                            <use xlink:href="#check-icon" />
+                        </svg> &nbsp; &nbsp;Basic integrations
+                    </li>
+                </ul>
+                <button class="simpleBtn">Get Started</button>
+            </div>
+
+            <div class="pricecard" id="middleCard">
+                <button id="popular">Most Popular</button>
+                <h3>Professional</h3>
+                <p>For growing businesses</p>
+                <h1>$19 <span>/month</span></h1>
+                <ul>
+                    <li>
+                        <svg width="18" height="18" stroke="#22c55e">
+                            <use xlink:href="#check-icon" />
+                        </svg> &nbsp; &nbsp;Unlimited calendars
+                    </li>
+                    <li class="liMargin">
+                        <svg width="18" height="18" stroke="#22c55e">
+                            <use xlink:href="#check-icon" />
+                        </svg> &nbsp; &nbsp;Advanced integrations
+                    </li>
+                    <li class="liMargin">
+                        <svg width="18" height="18" stroke="#22c55e">
+                            <use xlink:href="#check-icon" />
+                        </svg> &nbsp; &nbsp;Team collaboration
+                    </li>
+                    <li class="liMargin">
+                        <svg width="18" height="18" stroke="#22c55e">
+                            <use xlink:href="#check-icon" />
+                        </svg> &nbsp; &nbsp;Priority support
+                    </li>
+                </ul>
+                <button class="middleBtn">Start Free Trial</button>
+            </div>
+
+            <div class="pricecard">
+                <h3>Enterprise</h3>
+                <p>For large organizations</p>
+                <h1>$49 <span>/month</span></h1>
+                <ul>
+                    <li>
+                        <svg width="18" height="18" stroke="#22c55e">
+                            <use xlink:href="#check-icon" />
+                        </svg> &nbsp; &nbsp;Everything in Professional
+                    </li>
+                    <li class="liMargin">
+                        <svg width="18" height="18" stroke="#22c55e">
+                            <use xlink:href="#check-icon" />
+                        </svg> &nbsp; &nbsp;Advanced analytics
+                    </li>
+                    <li class="liMargin">
+                        <svg width="18" height="18" stroke="#22c55e">
+                            <use xlink:href="#check-icon" />
+                        </svg> &nbsp; &nbsp;Custom integrations
+                    </li>
+                    <li class="liMargin">
+                        <svg width="18" height="18" stroke="#22c55e">
+                            <use xlink:href="#check-icon" />
+                        </svg> &nbsp; &nbsp;Dedicated support
+                    </li>
+                </ul>
+                <button class="simpleBtn">Contact Sales</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ----------Page 4----------------- -->
+    <div class="page4">
+        <h2>Ready to streamline your scheduling?</h2>
+        <p>Join thousands of professionals who trust SmartCal for their calendar management</p>
+        <button>Start Your Free Trial Today <svg class="arrow-icon" xmlns="http://www.w3.org/2000/svg" width="18"
+                height="18" fill="none" viewBox="0 0 24 24">
+                <path stroke="currentColor" stroke-width="2" d="M5 12h14m0 0l-5-5m5 5l-5 5" />
+            </svg></button>
+    </div>
+
+
+    <!-- ---------Footer------------ -->
+
+    <footer>
+        <div class="col">
+            <h3 id="webName">SmartCal</h3>
+            <p>The intelligent calendar booking <br>system for modern professionals.</p>
+        </div>
+
+        <div class="col">
+            <h3>Product</h3>
+            <ul>
+                <li>Features</li>
+                <li>Pricing</li>
+                <li>Security</li>
+                <li>Integrations</li>
+            </ul>
+        </div>
+
+        <div class="col">
+            <h3>Company</h3>
+            <ul>
+                <li>About</li>
+                <li>blog</li>
+                <li>Career</li>
+                <li>Contact</li>
+            </ul>
+        </div>
+
+        <div class="col">
+            <h3>Support</h3>
+            <ul>
+                <li>Help Center</li>
+                <li>Documentation</li>
+                <li>API References</li>
+                <li>Status</li>
+            </ul>
+        </div>
+    </footer>
+    <hr>
+
+    <p id="footerPara">© 2024 SmartCal. All rights reserved.</p>
+
+
+</body>
+
+</html>
