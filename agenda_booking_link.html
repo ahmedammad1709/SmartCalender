@@ -51,57 +51,233 @@
                 </div>
                 <input type="hidden" id="selectedTime" name="selectedTime" required>
             </div>
-            <button type="submit" class="btn btn-primary w-100">Book Meeting</button>
+            <button type="submit" class="btn btn-primary w-100" id="bookButton" disabled>Book Meeting</button>
         </form>
         <div id="bookingSuccess" class="alert alert-success mt-3 d-none">Booking successful! Check your email for details.</div>
         <div id="bookingError" class="alert alert-danger mt-3 d-none">Booking failed. Please try again.</div>
+        <div id="loadingMessage" class="alert alert-info mt-3 d-none">Loading available slots...</div>
     </div>
 
     <script>
-    // --- DYNAMIC DATA LOADING (to be replaced with real API calls) ---
-            // Example: fetch user/agenda info from URL params or backend
-        document.addEventListener('DOMContentLoaded', function() {
-            // Get data from URL parameters
-            const params = new URLSearchParams(window.location.search);
-            const user = params.get('user') || 'John Doe';
-            const agenda = params.get('agenda') || 'Consultation Call';
-            const duration = params.get('duration') || '30';
-            
-            // Update the page content with clear labels
-            document.getElementById('userName').textContent = user;
-            document.getElementById('agendaTitle').textContent = agenda;
-            document.getElementById('meetingDuration').textContent = `Duration: ${duration} min`;
-            
-            // Update page title
-            document.title = `Book with ${user} - ${agenda}`;
+    let currentAgendaId = null;
+    let currentAgendaData = null;
 
-        // Simulate available slots (replace with real fetch)
-        const slots = ['10:00 AM', '10:30 AM', '11:00 AM', '2:00 PM', '2:30 PM'];
-        const timeSlotsDiv = document.getElementById('timeSlots');
-        slots.forEach(slot => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'btn btn-outline-primary slot-btn';
-            btn.textContent = slot;
-            btn.onclick = function() {
-                document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
-                btn.classList.add('selected');
-                document.getElementById('selectedTime').value = slot;
-            };
-            timeSlotsDiv.appendChild(btn);
+    // Get data from URL parameters
+    document.addEventListener('DOMContentLoaded', async function() {
+        const params = new URLSearchParams(window.location.search);
+        const user = params.get('user') || 'John Doe';
+        const agenda = params.get('agenda') || 'Consultation Call';
+        const duration = params.get('duration') || '30';
+        
+        // Update the page content with clear labels
+        document.getElementById('userName').textContent = user;
+        document.getElementById('agendaTitle').textContent = agenda;
+        document.getElementById('meetingDuration').textContent = `Duration: ${duration} min`;
+        
+        // Update page title
+        document.title = `Book with ${user} - ${agenda}`;
+
+        // Set minimum date to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('meetingDate').min = today;
+        document.getElementById('meetingDate').value = today;
+
+        // Try to get agenda ID from URL or fetch it
+        const agendaId = params.get('agendaId');
+        if (agendaId) {
+            currentAgendaId = parseInt(agendaId);
+            await loadAgendaAvailability();
+        } else {
+            // Try to find agenda by title (simplified for demo)
+            await findAgendaByTitle(agenda);
+        }
+
+        // Add event listener for date change
+        document.getElementById('meetingDate').addEventListener('change', function() {
+            if (currentAgendaId) {
+                loadAvailableSlots(this.value);
+            }
         });
     });
 
-    // --- Booking Form Submission ---
+    async function findAgendaByTitle(title) {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch('/agendas/', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const agendas = await response.json();
+                const agenda = agendas.find(a => a.title === title);
+                if (agenda) {
+                    currentAgendaId = agenda.id;
+                    await loadAgendaAvailability();
+                }
+            }
+        } catch (error) {
+            console.error('Error finding agenda:', error);
+        }
+    }
+
+    async function loadAgendaAvailability() {
+        try {
+            const response = await fetch(`/agenda/${currentAgendaId}/availability`);
+            if (response.ok) {
+                currentAgendaData = await response.json();
+                console.log('Agenda availability loaded:', currentAgendaData);
+                
+                // Load slots for today
+                const today = new Date().toISOString().split('T')[0];
+                await loadAvailableSlots(today);
+            }
+        } catch (error) {
+            console.error('Error loading agenda availability:', error);
+            showError('Error loading agenda availability');
+        }
+    }
+
+    async function loadAvailableSlots(date) {
+        const timeSlotsDiv = document.getElementById('timeSlots');
+        const bookButton = document.getElementById('bookButton');
+        
+        // Show loading
+        timeSlotsDiv.innerHTML = '<p class="text-muted">Loading available slots...</p>';
+        bookButton.disabled = true;
+        
+        try {
+            const response = await fetch(`/agenda/${currentAgendaId}/slots/${date}`);
+            const data = await response.json();
+            
+            if (!data.available) {
+                timeSlotsDiv.innerHTML = `<div class="alert alert-warning">${data.message}</div>`;
+                return;
+            }
+            
+            if (data.slots.length === 0) {
+                timeSlotsDiv.innerHTML = '<div class="alert alert-info">No available slots for this date. Please try another day.</div>';
+                return;
+            }
+            
+            // Clear previous slots
+            timeSlotsDiv.innerHTML = '';
+            
+            // Create slot buttons
+            data.slots.forEach(slot => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `btn ${slot.available ? 'btn-outline-primary' : 'btn-secondary'} slot-btn me-2 mb-2`;
+                btn.textContent = slot.display;
+                btn.disabled = !slot.available;
+                
+                if (slot.available) {
+                    btn.onclick = function() {
+                        // Remove selection from other buttons
+                        document.querySelectorAll('.slot-btn').forEach(b => {
+                            b.classList.remove('btn-primary');
+                            b.classList.add('btn-outline-primary');
+                        });
+                        
+                        // Select this button
+                        btn.classList.remove('btn-outline-primary');
+                        btn.classList.add('btn-primary');
+                        
+                        // Set selected time
+                        document.getElementById('selectedTime').value = slot.time;
+                        bookButton.disabled = false;
+                    };
+                }
+                
+                timeSlotsDiv.appendChild(btn);
+            });
+            
+        } catch (error) {
+            console.error('Error loading slots:', error);
+            timeSlotsDiv.innerHTML = '<div class="alert alert-danger">Error loading available slots. Please try again.</div>';
+        }
+    }
+
+    // Booking form submission
     document.getElementById('bookingForm').addEventListener('submit', async function(e) {
         e.preventDefault();
-        // TODO: Send booking data to backend
-        // For now, just show success
-        document.getElementById('bookingSuccess').classList.remove('d-none');
-        document.getElementById('bookingError').classList.add('d-none');
-        this.reset();
-        document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+        
+        const visitorName = document.getElementById('visitorName').value;
+        const visitorEmail = document.getElementById('visitorEmail').value;
+        const bookingDate = document.getElementById('meetingDate').value;
+        const selectedTime = document.getElementById('selectedTime').value;
+        
+        if (!currentAgendaId || !selectedTime) {
+            showError('Please select a time slot');
+            return;
+        }
+        
+        const bookButton = document.getElementById('bookButton');
+        const originalText = bookButton.textContent;
+        bookButton.textContent = 'Booking...';
+        bookButton.disabled = true;
+        
+        try {
+            const response = await fetch('/booking/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    agendaId: currentAgendaId,
+                    visitorName: visitorName,
+                    visitorEmail: visitorEmail,
+                    bookingDate: bookingDate,
+                    timeSlot: selectedTime
+                })
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                showSuccess(result.message);
+                this.reset();
+                document.querySelectorAll('.slot-btn').forEach(b => {
+                    b.classList.remove('btn-primary');
+                    b.classList.add('btn-outline-primary');
+                });
+                document.getElementById('selectedTime').value = '';
+                
+                // Reload slots to show updated availability
+                await loadAvailableSlots(bookingDate);
+            } else {
+                const error = await response.json();
+                showError(error.detail);
+            }
+        } catch (error) {
+            console.error('Error creating booking:', error);
+            showError('Error creating booking. Please try again.');
+        } finally {
+            bookButton.textContent = originalText;
+            bookButton.disabled = false;
+        }
     });
+
+    function showSuccess(message) {
+        const successDiv = document.getElementById('bookingSuccess');
+        const errorDiv = document.getElementById('bookingError');
+        successDiv.textContent = message;
+        successDiv.classList.remove('d-none');
+        errorDiv.classList.add('d-none');
+        
+        setTimeout(() => {
+            successDiv.classList.add('d-none');
+        }, 5000);
+    }
+
+    function showError(message) {
+        const errorDiv = document.getElementById('bookingError');
+        const successDiv = document.getElementById('bookingSuccess');
+        errorDiv.textContent = message;
+        errorDiv.classList.remove('d-none');
+        successDiv.classList.add('d-none');
+        
+        setTimeout(() => {
+            errorDiv.classList.add('d-none');
+        }, 5000);
+    }
     </script>
 </body>
 </html> 

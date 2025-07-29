@@ -869,7 +869,7 @@
                 <button class="dashboard-btn" onclick="showAvailability()">Set Availability</button>
             </div>
 
-                    <div class="dashboard-card">
+        <div class="dashboard-card">
             <h3>📋 Agendas</h3>
             <p>Create booking pages for others to schedule meetings with you.</p>
             <button class="dashboard-btn" onclick="openAgendaModal()">Create New Agenda</button>
@@ -1403,14 +1403,83 @@
         async function loadUpcomingMeetings() {
             try {
                 const meetingsContainer = document.getElementById('upcomingMeetings');
-                // For now, show no meetings - this will be implemented when meetings functionality is added
-                meetingsContainer.innerHTML = `
-                    <div class="no-meetings">
-                        <p>You have no upcoming meetings. Check back soon!</p>
-                    </div>
-                `;
+                
+                const response = await fetch('/meetings/upcoming', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (data.meetings.length === 0) {
+                        meetingsContainer.innerHTML = `
+                            <div class="no-meetings">
+                                <p>You have no upcoming meetings. Check back soon!</p>
+                            </div>
+                        `;
+                    } else {
+                        let meetingsHTML = '';
+                        data.meetings.forEach(meeting => {
+                            meetingsHTML += `
+                                <div class="meeting-card" style="
+                                    background: white;
+                                    border: 1px solid #e0e0e0;
+                                    border-radius: 8px;
+                                    padding: 20px;
+                                    margin-bottom: 15px;
+                                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                                ">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                                        <h4 style="margin: 0; color: #333; font-size: 16px;">${meeting.agenda_title}</h4>
+                                        <span style="
+                                            background: #007bff;
+                                            color: white;
+                                            padding: 4px 8px;
+                                            border-radius: 4px;
+                                            font-size: 12px;
+                                            font-weight: bold;
+                                        ">${meeting.duration} min</span>
+                                    </div>
+                                    <div style="margin-bottom: 8px;">
+                                        <strong style="color: #555;">👤 Visitor:</strong> ${meeting.visitor_name}
+                                    </div>
+                                    <div style="margin-bottom: 8px;">
+                                        <strong style="color: #555;">📧 Email:</strong> <a href="mailto:${meeting.visitor_email}" style="color: #007bff; text-decoration: none;">${meeting.visitor_email}</a>
+                                    </div>
+                                    <div style="margin-bottom: 8px;">
+                                        <strong style="color: #555;">📅 Date:</strong> ${meeting.formatted_date}
+                                    </div>
+                                    <div style="margin-bottom: 8px;">
+                                        <strong style="color: #555;">⏰ Time:</strong> ${meeting.formatted_time}
+                                    </div>
+                                    <div style="font-size: 12px; color: #888; margin-top: 10px;">
+                                        Booked on: ${new Date(meeting.created_at).toLocaleDateString()}
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        
+                        meetingsContainer.innerHTML = meetingsHTML;
+                    }
+                } else {
+                    console.error('Failed to load meetings');
+                    meetingsContainer.innerHTML = `
+                        <div class="error-message">
+                            <p>Error loading meetings. Please try again.</p>
+                        </div>
+                    `;
+                }
             } catch (error) {
                 console.error('Error loading meetings:', error);
+                const meetingsContainer = document.getElementById('upcomingMeetings');
+                meetingsContainer.innerHTML = `
+                    <div class="error-message">
+                        <p>Error loading meetings. Please try again.</p>
+                    </div>
+                `;
             }
         }
 

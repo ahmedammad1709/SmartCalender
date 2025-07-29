@@ -71,6 +71,177 @@ The SmartCal Team
         print(f"Error sending email: {e}")
         return False
 
+def send_booking_confirmation_visitor(visitor_email, visitor_name, agenda_title, host_name, booking_date, time_slot, duration, alias_name):
+    """Send booking confirmation email to visitor"""
+    try:
+        # Format date and time
+        from datetime import datetime
+        date_obj = datetime.strptime(booking_date, '%Y-%m-%d')
+        formatted_date = date_obj.strftime('%A, %B %d, %Y')
+        
+        # Format time
+        time_obj = datetime.strptime(time_slot, '%H:%M')
+        formatted_time = time_obj.strftime('%I:%M %p')
+        
+        msg = Message(
+            subject=f'✅ Meeting Confirmed: {agenda_title}',
+            recipients=[visitor_email],
+            body=f'''
+Hello {visitor_name}!
+
+Your meeting has been successfully booked with {host_name}.
+
+Meeting Details:
+- Agenda: {agenda_title}
+- Date: {formatted_date}
+- Time: {formatted_time}
+- Duration: {duration} minutes
+- Host: {host_name}
+
+Please make sure to join the meeting on time. If you need to reschedule or cancel, please contact {host_name} directly.
+
+Best regards,
+The SmartCal Team
+            ''',
+            html=f'''
+<html>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #28a745; margin-bottom: 10px;">✅ Meeting Confirmed!</h1>
+            <p style="font-size: 18px; color: #666;">Your meeting has been successfully booked</p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 25px; border-radius: 10px; margin-bottom: 25px;">
+            <h2 style="color: #333; margin-bottom: 20px;">Meeting Details</h2>
+            <div style="margin-bottom: 15px;">
+                <strong style="color: #555;">Agenda:</strong> {agenda_title}
+            </div>
+            <div style="margin-bottom: 15px;">
+                <strong style="color: #555;">Date:</strong> {formatted_date}
+            </div>
+            <div style="margin-bottom: 15px;">
+                <strong style="color: #555;">Time:</strong> {formatted_time}
+            </div>
+            <div style="margin-bottom: 15px;">
+                <strong style="color: #555;">Duration:</strong> {duration} minutes
+            </div>
+            <div style="margin-bottom: 15px;">
+                <strong style="color: #555;">Host:</strong> {host_name}
+            </div>
+        </div>
+        
+        <div style="background: #e7f3ff; padding: 20px; border-radius: 8px; border-left: 4px solid #007bff;">
+            <p style="margin: 0; color: #0056b3;">
+                <strong>Important:</strong> Please make sure to join the meeting on time. 
+                If you need to reschedule or cancel, please contact {host_name} directly.
+            </p>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+            <p style="color: #666; margin: 0;">
+                Best regards,<br>
+                <strong>The SmartCal Team</strong>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+            '''
+        )
+        mail.send(msg)
+        return True
+    except Exception as e:
+        print(f"Error sending visitor confirmation email: {e}")
+        return False
+
+def send_booking_notification_host(host_email, host_name, visitor_name, visitor_email, agenda_title, booking_date, time_slot, duration):
+    """Send booking notification email to host"""
+    try:
+        # Format date and time
+        from datetime import datetime
+        date_obj = datetime.strptime(booking_date, '%Y-%m-%d')
+        formatted_date = date_obj.strftime('%A, %B %d, %Y')
+        
+        # Format time
+        time_obj = datetime.strptime(time_slot, '%H:%M')
+        formatted_time = time_obj.strftime('%I:%M %p')
+        
+        msg = Message(
+            subject=f'📅 New Meeting Booking: {agenda_title}',
+            recipients=[host_email],
+            body=f'''
+Hello {host_name}!
+
+You have a new meeting booking for your agenda "{agenda_title}".
+
+Booking Details:
+- Visitor: {visitor_name} ({visitor_email})
+- Date: {formatted_date}
+- Time: {formatted_time}
+- Duration: {duration} minutes
+- Agenda: {agenda_title}
+
+Please make sure to be available for this meeting. You can contact the visitor at {visitor_email} if needed.
+
+Best regards,
+The SmartCal Team
+            ''',
+            html=f'''
+<html>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #007bff; margin-bottom: 10px;">📅 New Meeting Booking</h1>
+            <p style="font-size: 18px; color: #666;">Someone has booked a meeting with you</p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 25px; border-radius: 10px; margin-bottom: 25px;">
+            <h2 style="color: #333; margin-bottom: 20px;">Booking Details</h2>
+            <div style="margin-bottom: 15px;">
+                <strong style="color: #555;">Visitor:</strong> {visitor_name}
+            </div>
+            <div style="margin-bottom: 15px;">
+                <strong style="color: #555;">Email:</strong> {visitor_email}
+            </div>
+            <div style="margin-bottom: 15px;">
+                <strong style="color: #555;">Date:</strong> {formatted_date}
+            </div>
+            <div style="margin-bottom: 15px;">
+                <strong style="color: #555;">Time:</strong> {formatted_time}
+            </div>
+            <div style="margin-bottom: 15px;">
+                <strong style="color: #555;">Duration:</strong> {duration} minutes
+            </div>
+            <div style="margin-bottom: 15px;">
+                <strong style="color: #555;">Agenda:</strong> {agenda_title}
+            </div>
+        </div>
+        
+        <div style="background: #fff3cd; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107;">
+            <p style="margin: 0; color: #856404;">
+                <strong>Reminder:</strong> Please make sure to be available for this meeting. 
+                You can contact the visitor at <a href="mailto:{visitor_email}" style="color: #007bff;">{visitor_email}</a> if needed.
+            </p>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+            <p style="color: #666; margin: 0;">
+                Best regards,<br>
+                <strong>The SmartCal Team</strong>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+            '''
+        )
+        mail.send(msg)
+        return True
+    except Exception as e:
+        print(f"Error sending host notification email: {e}")
+        return False
+
 # Database initialization
 def init_db():
     conn = sqlite3.connect('smartcal.db')
@@ -137,6 +308,19 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS bookings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agenda_id INTEGER NOT NULL,
+            visitor_name TEXT NOT NULL,
+            visitor_email TEXT NOT NULL,
+            booking_date DATE NOT NULL,
+            time_slot TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (agenda_id) REFERENCES agendas (id)
         )
     ''')
     
@@ -970,6 +1154,263 @@ def get_user_notifications(current_user):
             })
         
         return jsonify(notification_list), 200
+        
+    except Exception as e:
+        return jsonify({'detail': str(e)}), 500
+
+@app.route('/agenda/<int:agenda_id>/availability', methods=['GET'])
+def get_agenda_availability(agenda_id):
+    """Get agenda availability schedule"""
+    try:
+        conn = sqlite3.connect('smartcal.db')
+        cursor = conn.cursor()
+        
+        # Get agenda details including availability
+        cursor.execute('''
+            SELECT id, title, duration, max_bookings_per_day, user_id, availability
+            FROM agendas WHERE id = ?
+        ''', (agenda_id,))
+        agenda = cursor.fetchone()
+        
+        if not agenda:
+            conn.close()
+            return jsonify({'detail': 'Agenda not found'}), 404
+        
+        # Parse the availability data from JSON
+        availability_data = json.loads(agenda[5]) if agenda[5] else {}
+        
+        conn.close()
+        
+        return jsonify({
+            'agendaId': agenda[0],
+            'title': agenda[1],
+            'duration': agenda[2],
+            'maxBookingsPerDay': agenda[3],
+            'availability': availability_data
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'detail': str(e)}), 500
+
+@app.route('/agenda/<int:agenda_id>/slots/<date>', methods=['GET'])
+def get_available_slots(agenda_id, date):
+    """Get available time slots for a specific date"""
+    try:
+        conn = sqlite3.connect('smartcal.db')
+        cursor = conn.cursor()
+        
+        # Get agenda details including availability
+        cursor.execute('''
+            SELECT id, title, duration, max_bookings_per_day, availability
+            FROM agendas WHERE id = ?
+        ''', (agenda_id,))
+        agenda = cursor.fetchone()
+        
+        if not agenda:
+            conn.close()
+            return jsonify({'detail': 'Agenda not found'}), 404
+        
+        # Parse availability data
+        availability_data = json.loads(agenda[4]) if agenda[4] else {}
+        
+        # Check if date is an available day based on the agenda's availability schedule
+        from datetime import datetime
+        selected_date = datetime.strptime(date, '%Y-%m-%d')
+        day_name = selected_date.strftime('%A').lower()
+        
+        # Check if this day is available in the agenda's schedule
+        if day_name not in availability_data:
+            conn.close()
+            return jsonify({
+                'available': False,
+                'message': 'No slots available for this date. Please choose another day.'
+            }), 200
+        
+        # Get the time range for this day
+        day_schedule = availability_data[day_name]
+        start_time = day_schedule.get('start', '09:00')
+        end_time = day_schedule.get('end', '17:00')
+        
+        # Convert time strings to minutes for easier calculation
+        def time_to_minutes(time_str):
+            hours, minutes = map(int, time_str.split(':'))
+            return hours * 60 + minutes
+        
+        start_minutes = time_to_minutes(start_time)
+        end_minutes = time_to_minutes(end_time)
+        duration = agenda[2]  # minutes
+        
+        # Get booked slots for this date
+        cursor.execute('''
+            SELECT time_slot FROM bookings 
+            WHERE agenda_id = ? AND booking_date = ?
+        ''', (agenda_id, date))
+        booked_slots = [row[0] for row in cursor.fetchall()]
+        
+        # Generate time slots within the available time range
+        available_slots = []
+        current_time = start_minutes
+        
+        while current_time + duration <= end_minutes:
+            time_str = f"{current_time // 60:02d}:{current_time % 60:02d}"
+            time_display = f"{current_time // 60:02d}:{current_time % 60:02d} {'AM' if current_time < 12 * 60 else 'PM'}"
+            
+            if time_str not in booked_slots:
+                available_slots.append({
+                    'time': time_str,
+                    'display': time_display,
+                    'available': True
+                })
+            else:
+                available_slots.append({
+                    'time': time_str,
+                    'display': time_display,
+                    'available': False
+                })
+            
+            current_time += duration
+        
+        conn.close()
+        
+        return jsonify({
+            'available': True,
+            'slots': available_slots,
+            'date': date
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'detail': str(e)}), 500
+
+@app.route('/booking/create', methods=['POST'])
+def create_booking():
+    """Create a new booking"""
+    try:
+        data = request.get_json()
+        agenda_id = data.get('agendaId')
+        visitor_name = data.get('visitorName')
+        visitor_email = data.get('visitorEmail')
+        booking_date = data.get('bookingDate')
+        time_slot = data.get('timeSlot')
+        
+        if not all([agenda_id, visitor_name, visitor_email, booking_date, time_slot]):
+            return jsonify({'detail': 'All booking details are required'}), 400
+        
+        conn = sqlite3.connect('smartcal.db')
+        cursor = conn.cursor()
+        
+        # Check if slot is still available
+        cursor.execute('''
+            SELECT id FROM bookings 
+            WHERE agenda_id = ? AND booking_date = ? AND time_slot = ?
+        ''', (agenda_id, booking_date, time_slot))
+        
+        if cursor.fetchone():
+            conn.close()
+            return jsonify({'detail': 'This slot is no longer available. Please select another.'}), 400
+        
+        # Get agenda and user details for email notifications
+        cursor.execute('''
+            SELECT a.title, a.duration, a.alias_name, u.name, u.email
+            FROM agendas a
+            JOIN users u ON a.user_id = u.id
+            WHERE a.id = ?
+        ''', (agenda_id,))
+        
+        agenda_info = cursor.fetchone()
+        if not agenda_info:
+            conn.close()
+            return jsonify({'detail': 'Agenda not found'}), 404
+        
+        agenda_title, duration, alias_name, host_name, host_email = agenda_info
+        
+        # Create booking
+        cursor.execute('''
+            INSERT INTO bookings (agenda_id, visitor_name, visitor_email, booking_date, time_slot, created_at)
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ''', (agenda_id, visitor_name, visitor_email, booking_date, time_slot))
+        
+        booking_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        
+        # Send confirmation email to visitor
+        send_booking_confirmation_visitor(
+            visitor_email, visitor_name, agenda_title, host_name, 
+            booking_date, time_slot, duration, alias_name
+        )
+        
+        # Send notification email to host
+        send_booking_notification_host(
+            host_email, host_name, visitor_name, visitor_email,
+            agenda_title, booking_date, time_slot, duration
+        )
+        
+        return jsonify({
+            'message': 'Booking created successfully! Check your email for confirmation.',
+            'bookingId': booking_id
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'detail': str(e)}), 500
+
+@app.route('/meetings/upcoming', methods=['GET'])
+@token_required
+def get_upcoming_meetings(current_user):
+    """Get upcoming meetings for the current user"""
+    try:
+        conn = sqlite3.connect('smartcal.db')
+        cursor = conn.cursor()
+        
+        # Get all upcoming meetings for the user's agendas
+        cursor.execute('''
+            SELECT 
+                b.id,
+                b.visitor_name,
+                b.visitor_email,
+                b.booking_date,
+                b.time_slot,
+                b.created_at,
+                a.title as agenda_title,
+                a.duration,
+                a.alias_name
+            FROM bookings b
+            JOIN agendas a ON b.agenda_id = a.id
+            WHERE a.user_id = ? AND b.booking_date >= DATE('now')
+            ORDER BY b.booking_date ASC, b.time_slot ASC
+        ''', (current_user,))
+        
+        meetings = []
+        for row in cursor.fetchall():
+            booking_id, visitor_name, visitor_email, booking_date, time_slot, created_at, agenda_title, duration, alias_name = row
+            
+            # Format date and time
+            from datetime import datetime
+            date_obj = datetime.strptime(booking_date, '%Y-%m-%d')
+            formatted_date = date_obj.strftime('%A, %B %d, %Y')
+            
+            time_obj = datetime.strptime(time_slot, '%H:%M')
+            formatted_time = time_obj.strftime('%I:%M %p')
+            
+            meetings.append({
+                'id': booking_id,
+                'visitor_name': visitor_name,
+                'visitor_email': visitor_email,
+                'booking_date': booking_date,
+                'formatted_date': formatted_date,
+                'time_slot': time_slot,
+                'formatted_time': formatted_time,
+                'agenda_title': agenda_title,
+                'duration': duration,
+                'alias_name': alias_name,
+                'created_at': created_at
+            })
+        
+        conn.close()
+        
+        return jsonify({
+            'meetings': meetings,
+            'count': len(meetings)
+        }), 200
         
     except Exception as e:
         return jsonify({'detail': str(e)}), 500
