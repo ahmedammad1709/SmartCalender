@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - SmartCal</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .auth-container {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .auth-form input {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        .auth-form button {
+            padding: 12px;
+            background: #000;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .auth-form button:hover {
+            background: #333;
+        }
+        .auth-links {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .auth-links a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .error-message {
+            color: #dc3545;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .forgot-password {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+        .forgot-password a {
+            color: #007bff;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .forgot-password a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <h2 style="text-align: center; margin-bottom: 30px;">Login to SmartCal</h2>
+        
+        <form class="auth-form" id="loginForm">
+            <input type="email" id="email" placeholder="Email" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <div class="forgot-password">
+                <a href="forgot-password.html">Forgot Password?</a>
+            </div>
+            <button type="submit">Login</button>
+        </form>
+        
+        <div class="error-message" id="errorMessage"></div>
+        
+        <div class="auth-links">
+            <a href="register.html">Don't have an account? Register</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('errorMessage');
+            
+            // Clear previous error
+            errorMessage.textContent = '';
+            
+            try {
+                console.log('DEBUG: Attempting login with email:', email);
+                
+                const response = await fetch('/users/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
+                
+                console.log('DEBUG: Login response status:', response.status);
+                
+                const data = await response.json();
+                console.log('DEBUG: Login response data:', data);
+                
+                if (response.ok && data.access_token) {
+                    // Store JWT token
+                    console.log('DEBUG: Login successful, storing token');
+                    console.log('DEBUG: Token received:', data.access_token.substring(0, 20) + '...');
+                    
+                    localStorage.setItem('token', data.access_token);
+                    localStorage.setItem('user', JSON.stringify(data));
+                    
+                    console.log('DEBUG: Token stored in localStorage');
+                    console.log('DEBUG: Stored token:', localStorage.getItem('token').substring(0, 20) + '...');
+                    
+                    // Redirect to dashboard
+                    window.location.href = '/dashboard.html';
+                } else {
+                    errorMessage.textContent = data.detail || 'Login failed - no token received';
+                }
+            } catch (error) {
+                console.error('DEBUG: Login error:', error);
+                errorMessage.textContent = 'Network error. Please try again.';
+            }
+        });
+    </script>
+</body>
+</html> 
