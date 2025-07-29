@@ -83,6 +83,10 @@ def init_db():
     if 'role' not in columns:
         cursor.execute('ALTER TABLE users ADD COLUMN role TEXT DEFAULT "user"')
     
+    # Check if banned column exists, if not add it
+    if 'banned' not in columns:
+        cursor.execute('ALTER TABLE users ADD COLUMN banned BOOLEAN DEFAULT 0')
+    
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -323,6 +327,11 @@ def login():
         conn.close()
         
         if user and bcrypt.checkpw(password.encode('utf-8'), user[4]):
+            # Check if user is banned
+            user_banned = user[7] if len(user) > 7 else False
+            if user_banned:
+                return jsonify({'detail': 'Your account has been banned. Please contact the administrator.'}), 403
+            
             user_role = user[6] if len(user) > 6 else 'user'
             
             token = jwt.encode({
@@ -639,7 +648,7 @@ def get_all_users(current_user):
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT id, name, email, alias, role, created_at 
+            SELECT id, name, email, alias, role, created_at, banned
             FROM users 
             ORDER BY created_at DESC
         ''')
@@ -648,8 +657,11 @@ def get_all_users(current_user):
         
         user_list = []
         for user in users:
-            # Determine status based on creation date
-            status = "Active" if user[5] else "Pending"
+            # Determine status based on banned status and creation date
+            if user[6]:  # banned
+                status = "Banned"
+            else:
+                status = "Active" if user[5] else "Pending"
             
             user_list.append({
                 'id': user[0],
@@ -658,6 +670,7 @@ def get_all_users(current_user):
                 'username': user[3],
                 'role': user[4],
                 'status': status,
+                'banned': bool(user[6]),
                 'createdAt': user[5]
             })
         
@@ -787,6 +800,118 @@ def change_admin_password(current_user):
         conn.close()
         
         return jsonify({'message': 'Password changed successfully'}), 200
+        
+    except Exception as e:
+        return jsonify({'detail': str(e)}), 500
+
+@app.route('/admin/ban-user', methods=['POST'])
+@token_required
+def ban_user(current_user):
+    """Ban a user"""
+    try:
+        data = request.get_json()
+        user_id = data.get('userId')
+        
+        if not user_id:
+            return jsonify({'detail': 'User ID is required'}), 400
+        
+        conn = sqlite3.connect('smartcal.db')
+        cursor = conn.cursor()
+        
+        # Check if user exists and is not already banned
+        cursor.execute('SELECT id, name, email, role, banned FROM users WHERE id = ?', (user_id,))
+        user = cursor.fetchone()
+        
+        if not user:
+            conn.close()
+            return jsonify({'detail': 'User not found'}), 404
+        
+        if user[4]:  # banned field
+            conn.close()
+            return jsonify({'detail': 'User is already banned'}), 400
+        
+        # Ban the user
+        cursor.execute('UPDATE users SET banned = 1 WHERE id = ?', (user_id,))
+        conn.commit()
+        conn.close()
+        
+        print(f"🔨 User {user[2]} (ID: {user_id}) banned by admin {current_user}")
+        return jsonify({'message': f'User {user[1]} has been banned successfully'}), 200
+        
+    except Exception as e:
+        return jsonify({'detail': str(e)}), 500
+
+@app.route('/admin/unban-user', methods=['POST'])
+@token_required
+def unban_user(current_user):
+    """Unban a user"""
+    try:
+        data = request.get_json()
+        user_id = data.get('userId')
+        
+        if not user_id:
+            return jsonify({'detail': 'User ID is required'}), 400
+        
+        conn = sqlite3.connect('smartcal.db')
+        cursor = conn.cursor()
+        
+        # Check if user exists and is banned
+        cursor.execute('SELECT id, name, email, role, banned FROM users WHERE id = ?', (user_id,))
+        user = cursor.fetchone()
+        
+        if not user:
+            conn.close()
+            return jsonify({'detail': 'User not found'}), 404
+        
+        if not user[4]:  # banned field
+            conn.close()
+            return jsonify({'detail': 'User is not banned'}), 400
+        
+        # Unban the user
+        cursor.execute('UPDATE users SET banned = 0 WHERE id = ?', (user_id,))
+        conn.commit()
+        conn.close()
+        
+        print(f"🔓 User {user[2]} (ID: {user_id}) unbanned by admin {current_user}")
+        return jsonify({'message': f'User {user[1]} has been unbanned successfully'}), 200
+        
+    except Exception as e:
+        return jsonify({'detail': str(e)}), 500
+
+@app.route('/admin/delete-agenda', methods=['POST'])
+@token_required
+def delete_agenda(current_user):
+    """Delete an agenda"""
+    try:
+        data = request.get_json()
+        agenda_id = data.get('agendaId')
+        
+        if not agenda_id:
+            return jsonify({'detail': 'Agenda ID is required'}), 400
+        
+        conn = sqlite3.connect('smartcal.db')
+        cursor = conn.cursor()
+        
+        # Check if agenda exists
+        cursor.execute('SELECT id, title, user_id FROM agendas WHERE id = ?', (agenda_id,))
+        agenda = cursor.fetchone()
+        
+        if not agenda:
+            conn.close()
+            return jsonify({'detail': 'Agenda not found'}), 404
+        
+        # Get user info for logging
+        cursor.execute('SELECT name, email FROM users WHERE id = ?', (agenda[2],))
+        user = cursor.fetchone()
+        user_name = user[0] if user else 'Unknown User'
+        
+        # Delete the agenda
+        cursor.execute('DELETE FROM agendas WHERE id = ?', (agenda_id,))
+        conn.commit()
+        conn.close()
+        
+        print(f"🗑️ Agenda '{agenda[1]}' (ID: {agenda_id}) deleted by admin {current_user}. Created by: {user_name}")
+        return jsonify({'message': f'Agenda "{agenda[1]}" has been deleted successfully'}), 200
         
     except Exception as e:
         return jsonify({'detail': str(e)}), 500
