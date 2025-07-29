@@ -120,13 +120,22 @@
                     console.log('DEBUG: Token received:', data.access_token.substring(0, 20) + '...');
                     
                     localStorage.setItem('token', data.access_token);
-                    localStorage.setItem('user', JSON.stringify(data));
+                    localStorage.setItem('user', JSON.stringify(data.user));
                     
                     console.log('DEBUG: Token stored in localStorage');
                     console.log('DEBUG: Stored token:', localStorage.getItem('token').substring(0, 20) + '...');
+                    console.log('DEBUG: Stored user data:', data.user);
                     
-                    // Redirect to dashboard
-                    window.location.href = '/dashboard.html';
+                    // Check user role and redirect accordingly
+                    const userRole = data.user.role || 'user';
+                    
+                    if (userRole === 'admin') {
+                        // Redirect admin to Super Admin dashboard
+                        window.location.href = '/SAdashboard.html';
+                    } else {
+                        // Redirect regular user to normal dashboard
+                        window.location.href = '/dashboard.html';
+                    }
                 } else {
                     errorMessage.textContent = data.detail || 'Login failed - no token received';
                 }

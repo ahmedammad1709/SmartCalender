@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartCal - Super Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 12px 20px;
+            margin: 5px 0;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            transform: translateX(5px);
+        }
+        
+        .sidebar .nav-link i {
+            margin-right: 10px;
+            width: 20px;
+        }
+        
+        .main-content {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stats-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+        }
+        
+        .table-responsive {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-action {
+            padding: 4px 8px;
+            margin: 2px;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+        
+        .section {
+            display: none;
+        }
+        
+        .section.active {
+            display: block;
+        }
+        
+        .form-control, .form-select {
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        }
+        
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-active {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-banned {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .log-entry {
+            padding: 10px;
+            border-left: 4px solid #667eea;
+            margin: 5px 0;
+            background-color: #f8f9fa;
+            border-radius: 0 5px 5px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                min-height: auto;
+            }
+            
+            .stats-card {
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 px-0">
+                <div class="sidebar p-3">
+                    <div class="text-center mb-4">
+                        <h4><i class="fas fa-calendar-alt me-2"></i>SmartCal</h4>
+                        <small>Super Admin Panel</small>
+                    </div>
+                    
+                    <nav class="nav flex-column">
+                        <a class="nav-link active" href="#" onclick="showSection('dashboard')">
+                            <i class="fas fa-home"></i> Dashboard Overview
+                        </a>
+                        <a class="nav-link" href="#" onclick="showSection('users')">
+                            <i class="fas fa-users"></i> Manage Users
+                        </a>
+                        <a class="nav-link" href="#" onclick="showSection('agendas')">
+                            <i class="fas fa-calendar"></i> View All Agendas
+                        </a>
+                        <a class="nav-link" href="#" onclick="showSection('notifications')">
+                            <i class="fas fa-bell"></i> Send Notification
+                        </a>
+                        <a class="nav-link" href="#" onclick="showSection('settings')">
+                            <i class="fas fa-cog"></i> Settings
+                        </a>
+                        <a class="nav-link" href="#" onclick="logout()">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </nav>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10">
+                <div class="main-content p-4">
+                    
+                    <!-- Dashboard Overview Section -->
+                    <div id="dashboard" class="section active">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2><i class="fas fa-tachometer-alt me-2"></i>Dashboard Overview</h2>
+                            <small class="text-muted">Last updated: <span id="lastUpdated"></span></small>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-3 mb-4">
+                                <div class="stats-card p-4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="stats-icon bg-primary me-3">
+                                            <i class="fas fa-users"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="mb-0" id="totalUsers">1,247</h3>
+                                            <small class="text-muted">Total Registered Users</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3 mb-4">
+                                <div class="stats-card p-4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="stats-icon bg-success me-3">
+                                            <i class="fas fa-calendar-check"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="mb-0" id="totalAgendas">3,891</h3>
+                                            <small class="text-muted">Agendas Created</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3 mb-4">
+                                <div class="stats-card p-4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="stats-icon bg-warning me-3">
+                                            <i class="fas fa-clock"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="mb-0" id="pendingVerifications">23</h3>
+                                            <small class="text-muted">Pending Verifications</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3 mb-4">
+                                <div class="stats-card p-4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="stats-icon bg-info me-3">
+                                            <i class="fas fa-bell"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0" id="lastBroadcast">Jul 25, 2024</h6>
+                                            <small class="text-muted">Last Broadcast Sent</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="stats-card p-4">
+                                    <h5><i class="fas fa-chart-line me-2"></i>Recent Activity</h5>
+                                    <div class="mt-3">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>New user registrations</span>
+                                            <span class="badge bg-success">+12 today</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>Agendas created</span>
+                                            <span class="badge bg-primary">+45 today</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>System notifications</span>
+                                            <span class="badge bg-info">+3 today</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="stats-card p-4">
+                                    <h5><i class="fas fa-exclamation-triangle me-2"></i>System Alerts</h5>
+                                    <div class="mt-3">
+                                        <div class="alert alert-warning alert-sm mb-2">
+                                            <i class="fas fa-exclamation-circle me-2"></i>
+                                            5 users pending verification
+                                        </div>
+                                        <div class="alert alert-info alert-sm mb-2">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            System maintenance scheduled for tomorrow
+                                        </div>
+                                        <div class="alert alert-success alert-sm mb-2">
+                                            <i class="fas fa-check-circle me-2"></i>
+                                            All systems operational
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Manage Users Section -->
+                    <div id="users" class="section">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2><i class="fas fa-users me-2"></i>Manage Users</h2>
+                            <button class="btn btn-primary" onclick="exportUsers()">
+                                <i class="fas fa-download me-2"></i>Export Users
+                            </button>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Username</th>
+                                        <th>Role</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>John Doe</td>
+                                        <td>john@x.com</td>
+                                        <td>john123</td>
+                                        <td><span class="badge bg-secondary">user</span></td>
+                                        <td><span class="status-badge status-active">Active</span></td>
+                                        <td>
+                                            <button class="btn btn-warning btn-sm btn-action" title="Ban User">
+                                                <i class="fas fa-ban"></i>
+                                            </button>
+                                            <button class="btn btn-info btn-sm btn-action" title="Reset Password">
+                                                <i class="fas fa-key"></i>
+                                            </button>
+                                            <button class="btn btn-primary btn-sm btn-action" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Sufiyan Ahmed</td>
+                                        <td>sufiyan@x.com</td>
+                                        <td>sufiyan</td>
+                                        <td><span class="badge bg-secondary">user</span></td>
+                                        <td><span class="status-badge status-pending">Pending</span></td>
+                                        <td>
+                                            <button class="btn btn-success btn-sm btn-action" title="Verify User">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button class="btn btn-danger btn-sm btn-action" title="Delete User">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Sarah Wilson</td>
+                                        <td>sarah@x.com</td>
+                                        <td>sarah_w</td>
+                                        <td><span class="badge bg-primary">admin</span></td>
+                                        <td><span class="status-badge status-active">Active</span></td>
+                                        <td>
+                                            <button class="btn btn-warning btn-sm btn-action" title="Ban User">
+                                                <i class="fas fa-ban"></i>
+                                            </button>
+                                            <button class="btn btn-info btn-sm btn-action" title="Reset Password">
+                                                <i class="fas fa-key"></i>
+                                            </button>
+                                            <button class="btn btn-primary btn-sm btn-action" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Mike Johnson</td>
+                                        <td>mike@x.com</td>
+                                        <td>mike_j</td>
+                                        <td><span class="badge bg-secondary">user</span></td>
+                                        <td><span class="status-badge status-banned">Banned</span></td>
+                                        <td>
+                                            <button class="btn btn-success btn-sm btn-action" title="Unban User">
+                                                <i class="fas fa-unlock"></i>
+                                            </button>
+                                            <button class="btn btn-danger btn-sm btn-action" title="Delete User">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- View All Agendas Section -->
+                    <div id="agendas" class="section">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2><i class="fas fa-calendar me-2"></i>View All Agendas</h2>
+                            <div>
+                                <button class="btn btn-outline-primary me-2" onclick="filterAgendas()">
+                                    <i class="fas fa-filter me-2"></i>Filter
+                                </button>
+                                <button class="btn btn-primary" onclick="exportAgendas()">
+                                    <i class="fas fa-download me-2"></i>Export
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <select class="form-select" id="userFilter">
+                                    <option value="">All Users</option>
+                                    <option value="john123">john123</option>
+                                    <option value="sufiyan">sufiyan</option>
+                                    <option value="sarah_w">sarah_w</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="statusFilter">
+                                    <option value="">All Status</option>
+                                    <option value="public">Public</option>
+                                    <option value="private">Private</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="date" class="form-control" id="dateFilter">
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-secondary w-100" onclick="clearFilters()">Clear Filters</button>
+                            </div>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Agenda Title</th>
+                                        <th>Created By</th>
+                                        <th>Date</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Daily Standup</td>
+                                        <td>john123</td>
+                                        <td>Jul 25, 2024</td>
+                                        <td><span class="badge bg-success">Public</span></td>
+                                        <td>
+                                            <button class="btn btn-primary btn-sm btn-action" title="View Agenda">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-warning btn-sm btn-action" title="Flag Agenda">
+                                                <i class="fas fa-flag"></i>
+                                            </button>
+                                            <button class="btn btn-danger btn-sm btn-action" title="Delete Agenda">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Weekly Team Meeting</td>
+                                        <td>sarah_w</td>
+                                        <td>Jul 24, 2024</td>
+                                        <td><span class="badge bg-secondary">Private</span></td>
+                                        <td>
+                                            <button class="btn btn-primary btn-sm btn-action" title="View Agenda">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-warning btn-sm btn-action" title="Flag Agenda">
+                                                <i class="fas fa-flag"></i>
+                                            </button>
+                                            <button class="btn btn-danger btn-sm btn-action" title="Delete Agenda">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Project Review</td>
+                                        <td>mike_j</td>
+                                        <td>Jul 23, 2024</td>
+                                        <td><span class="badge bg-success">Public</span></td>
+                                        <td>
+                                            <button class="btn btn-primary btn-sm btn-action" title="View Agenda">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-warning btn-sm btn-action" title="Flag Agenda">
+                                                <i class="fas fa-flag"></i>
+                                            </button>
+                                            <button class="btn btn-danger btn-sm btn-action" title="Delete Agenda">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Send Notification Section -->
+                    <div id="notifications" class="section">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2><i class="fas fa-bell me-2"></i>Send Notification</h2>
+                            <button class="btn btn-outline-primary" onclick="viewNotificationHistory()">
+                                <i class="fas fa-history me-2"></i>View History
+                            </button>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="stats-card p-4">
+                                    <form id="notificationForm">
+                                        <div class="mb-3">
+                                            <label for="notificationSubject" class="form-label">Subject</label>
+                                            <input type="text" class="form-control" id="notificationSubject" 
+                                                   placeholder="Enter notification subject" required>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="notificationMessage" class="form-label">Message</label>
+                                            <textarea class="form-control" id="notificationMessage" rows="6" 
+                                                      placeholder="Enter your notification message here..." required></textarea>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label class="form-label">Recipients</label>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="recipients" 
+                                                       id="sendToAll" value="all" checked>
+                                                <label class="form-check-label" for="sendToAll">
+                                                    Send to All Users
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="recipients" 
+                                                       id="sendToSelected" value="selected">
+                                                <label class="form-check-label" for="sendToSelected">
+                                                    Send to Selected Users
+                                                </label>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-3" id="selectedUsersDiv" style="display: none;">
+                                            <label for="selectedUsers" class="form-label">Selected Usernames</label>
+                                            <textarea class="form-control" id="selectedUsers" rows="3" 
+                                                      placeholder="Enter usernames separated by commas (e.g., john123, sarah_w, mike_j)"></textarea>
+                                            <small class="text-muted">Enter usernames separated by commas</small>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="urgentNotification">
+                                                <label class="form-check-label" for="urgentNotification">
+                                                    Mark as Urgent
+                                                </label>
+                                            </div>
+                                        </div>
+                                        
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-paper-plane me-2"></i>Send Notification
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="stats-card p-4">
+                                    <h5><i class="fas fa-info-circle me-2"></i>Notification Stats</h5>
+                                    <div class="mt-3">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>Total Sent Today</span>
+                                            <span class="badge bg-primary">5</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>Pending Delivery</span>
+                                            <span class="badge bg-warning">2</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>Failed Deliveries</span>
+                                            <span class="badge bg-danger">0</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>Active Recipients</span>
+                                            <span class="badge bg-success">1,245</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="stats-card p-4 mt-3">
+                                    <h5><i class="fas fa-clock me-2"></i>Recent Notifications</h5>
+                                    <div class="mt-3">
+                                        <div class="log-entry">
+                                            <strong>System Maintenance</strong><br>
+                                            <small class="text-muted">Sent to all users - 2 hours ago</small>
+                                        </div>
+                                        <div class="log-entry">
+                                            <strong>New Feature Update</strong><br>
+                                            <small class="text-muted">Sent to premium users - 1 day ago</small>
+                                        </div>
+                                        <div class="log-entry">
+                                            <strong>Welcome Message</strong><br>
+                                            <small class="text-muted">Sent to new users - 2 days ago</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Settings Section -->
+                    <div id="settings" class="section">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2><i class="fas fa-cog me-2"></i>Settings</h2>
+                            <button class="btn btn-success" onclick="saveSettings()">
+                                <i class="fas fa-save me-2"></i>Save All Settings
+                            </button>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="stats-card p-4 mb-4">
+                                    <h5><i class="fas fa-key me-2"></i>Change Super Admin Password</h5>
+                                    <form id="passwordForm">
+                                        <div class="mb-3">
+                                            <label for="currentPassword" class="form-label">Current Password</label>
+                                            <input type="password" class="form-control" id="currentPassword" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="newPassword" class="form-label">New Password</label>
+                                            <input type="password" class="form-control" id="newPassword" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                                            <input type="password" class="form-control" id="confirmPassword" required>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-key me-2"></i>Change Password
+                                        </button>
+                                    </form>
+                                </div>
+                                
+                                <div class="stats-card p-4">
+                                    <h5><i class="fas fa-envelope me-2"></i>Email Settings</h5>
+                                    <form id="emailForm">
+                                        <div class="mb-3">
+                                            <label for="smtpServer" class="form-label">SMTP Server</label>
+                                            <input type="text" class="form-control" id="smtpServer" 
+                                                   value="smtp.gmail.com">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="smtpPort" class="form-label">SMTP Port</label>
+                                            <input type="number" class="form-control" id="smtpPort" value="587">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="emailUsername" class="form-label">Email Username</label>
+                                            <input type="email" class="form-control" id="emailUsername" 
+                                                   value="admin@smartcal.com">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="emailPassword" class="form-label">Email Password</label>
+                                            <input type="password" class="form-control" id="emailPassword">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save me-2"></i>Save Email Settings
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="stats-card p-4 mb-4">
+                                    <h5><i class="fas fa-list me-2"></i>System Logs</h5>
+                                    <div class="mt-3" style="max-height: 300px; overflow-y: auto;">
+                                        <div class="log-entry">
+                                            <strong>INFO</strong> - User login: john123 - 2024-07-25 14:30:22
+                                        </div>
+                                        <div class="log-entry">
+                                            <strong>WARNING</strong> - Failed login attempt: unknown@email.com - 2024-07-25 14:25:15
+                                        </div>
+                                        <div class="log-entry">
+                                            <strong>INFO</strong> - New agenda created: "Weekly Review" by sarah_w - 2024-07-25 14:20:45
+                                        </div>
+                                        <div class="log-entry">
+                                            <strong>ERROR</strong> - Database connection timeout - 2024-07-25 14:15:30
+                                        </div>
+                                        <div class="log-entry">
+                                            <strong>INFO</strong> - System backup completed - 2024-07-25 14:00:00
+                                        </div>
+                                        <div class="log-entry">
+                                            <strong>INFO</strong> - User registration: mike_j - 2024-07-25 13:45:12
+                                        </div>
+                                        <div class="log-entry">
+                                            <strong>WARNING</strong> - High memory usage detected - 2024-07-25 13:30:00
+                                        </div>
+                                        <div class="log-entry">
+                                            <strong>INFO</strong> - Notification sent to 1,245 users - 2024-07-25 13:15:22
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="stats-card p-4">
+                                    <h5><i class="fas fa-sign-in-alt me-2"></i>Last 10 Login Attempts</h5>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Username</th>
+                                                    <th>IP Address</th>
+                                                    <th>Status</th>
+                                                    <th>Time</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>admin</td>
+                                                    <td>192.168.1.100</td>
+                                                    <td><span class="badge bg-success">Success</span></td>
+                                                    <td>14:30:22</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>unknown@email.com</td>
+                                                    <td>203.45.67.89</td>
+                                                    <td><span class="badge bg-danger">Failed</span></td>
+                                                    <td>14:25:15</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>john123</td>
+                                                    <td>192.168.1.101</td>
+                                                    <td><span class="badge bg-success">Success</span></td>
+                                                    <td>14:20:30</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>sarah_w</td>
+                                                    <td>192.168.1.102</td>
+                                                    <td><span class="badge bg-success">Success</span></td>
+                                                    <td>14:15:45</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>hacker@evil.com</td>
+                                                    <td>45.67.89.123</td>
+                                                    <td><span class="badge bg-danger">Failed</span></td>
+                                                    <td>14:10:20</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Check if user is logged in and is admin
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            
+            console.log('🔍 Auth Check - Token:', token ? 'Present' : 'Missing');
+            console.log('🔍 Auth Check - User:', user);
+            console.log('🔍 Auth Check - Role:', user.role);
+            
+            if (!token) {
+                console.log('❌ No token found, redirecting to login');
+                window.location.href = '/login.html';
+                return false;
+            }
+            
+            // Check if user data exists and has role
+            if (!user || !user.role) {
+                console.log('❌ User data missing or no role, redirecting to login');
+                window.location.href = '/login.html';
+                return false;
+            }
+            
+            if (user.role !== 'admin') {
+                console.log('❌ User is not admin, redirecting to login');
+                window.location.href = '/login.html';
+                return false;
+            }
+            
+            console.log('✅ Auth check passed');
+            return true;
+        }
+
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Update last updated time
+        document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+
+        // Verify token and get user info
+        async function verifyToken() {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    return false;
+                }
+                
+                const response = await fetch('/users/me', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const userData = await response.json();
+                    console.log('✅ Token verified, user data:', userData);
+                    
+                    // Update localStorage with fresh user data
+                    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+                    currentUser.role = userData.role;
+                    localStorage.setItem('user', JSON.stringify(currentUser));
+                    
+                    return userData.role === 'admin';
+                } else {
+                    console.log('❌ Token verification failed');
+                    return false;
+                }
+            } catch (error) {
+                console.error('❌ Error verifying token:', error);
+                return false;
+            }
+        }
+
+        // Load admin dashboard stats
+        async function loadAdminStats() {
+            try {
+                const token = localStorage.getItem('token');
+                console.log('📊 Loading admin stats with token:', token ? 'Present' : 'Missing');
+                
+                const response = await fetch('/admin/stats', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                console.log('📊 Admin stats response status:', response.status);
+                
+                if (response.ok) {
+                    const stats = await response.json();
+                    console.log('📊 Admin stats loaded:', stats);
+                    document.getElementById('totalUsers').textContent = stats.totalUsers;
+                    document.getElementById('totalAgendas').textContent = stats.totalAgendas;
+                    document.getElementById('pendingVerifications').textContent = stats.pendingVerifications;
+                    document.getElementById('lastBroadcast').textContent = stats.lastBroadcast;
+                } else {
+                    console.error('❌ Failed to load admin stats:', response.status);
+                    const error = await response.text();
+                    console.error('❌ Error details:', error);
+                }
+            } catch (error) {
+                console.error('❌ Error loading admin stats:', error);
+            }
+        }
+
+        // Load all users
+        async function loadAllUsers() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/admin/users', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const users = await response.json();
+                    const tbody = document.querySelector('#users tbody');
+                    tbody.innerHTML = '';
+                    
+                    users.forEach(user => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${user.name}</td>
+                            <td>${user.email}</td>
+                            <td>${user.username}</td>
+                            <td><span class="badge bg-${user.role === 'admin' ? 'primary' : 'secondary'}">${user.role}</span></td>
+                            <td><span class="status-badge status-${user.status.toLowerCase()}">${user.status}</span></td>
+                            <td>
+                                <button class="btn btn-warning btn-sm btn-action" title="Ban User" onclick="banUser(${user.id})">
+                                    <i class="fas fa-ban"></i>
+                                </button>
+                                <button class="btn btn-info btn-sm btn-action" title="Reset Password" onclick="resetPassword(${user.id})">
+                                    <i class="fas fa-key"></i>
+                                </button>
+                                <button class="btn btn-primary btn-sm btn-action" title="View Details" onclick="viewUserDetails(${user.id})">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        // Load all agendas
+        async function loadAllAgendas() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/admin/agendas', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const agendas = await response.json();
+                    const tbody = document.querySelector('#agendas tbody');
+                    tbody.innerHTML = '';
+                    
+                    agendas.forEach(agenda => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${agenda.title}</td>
+                            <td>${agenda.creatorName} (${agenda.creatorAlias})</td>
+                            <td>${new Date(agenda.createdAt).toLocaleDateString()}</td>
+                            <td><span class="badge bg-success">Public</span></td>
+                            <td>
+                                <button class="btn btn-primary btn-sm btn-action" title="View Agenda" onclick="viewAgenda(${agenda.id})">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-warning btn-sm btn-action" title="Flag Agenda" onclick="flagAgenda(${agenda.id})">
+                                    <i class="fas fa-flag"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm btn-action" title="Delete Agenda" onclick="deleteAgenda(${agenda.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading agendas:', error);
+            }
+        }
+
+        // Navigation function
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Remove active class from all nav links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Add active class to clicked nav link
+            event.target.classList.add('active');
+            
+            // Load data based on section
+            if (sectionId === 'dashboard') {
+                loadAdminStats();
+            } else if (sectionId === 'users') {
+                loadAllUsers();
+            } else if (sectionId === 'agendas') {
+                loadAllAgendas();
+            }
+        }
+
+        // Notification form handling
+        document.getElementById('sendToAll').addEventListener('change', function() {
+            document.getElementById('selectedUsersDiv').style.display = 'none';
+        });
+
+        document.getElementById('sendToSelected').addEventListener('change', function() {
+            document.getElementById('selectedUsersDiv').style.display = 'block';
+        });
+
+        document.getElementById('notificationForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const subject = document.getElementById('notificationSubject').value;
+            const message = document.getElementById('notificationMessage').value;
+            const recipients = document.querySelector('input[name="recipients"]:checked').value;
+            const selectedUsers = document.getElementById('selectedUsers').value;
+            const urgent = document.getElementById('urgentNotification').checked;
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/admin/notifications', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        subject: subject,
+                        message: message,
+                        recipients: recipients,
+                        selectedUsers: selectedUsers,
+                        urgent: urgent
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Notification sent successfully!');
+                    this.reset();
+                    document.getElementById('selectedUsersDiv').style.display = 'none';
+                } else {
+                    const error = await response.json();
+                    alert('Error sending notification: ' + error.detail);
+                }
+            } catch (error) {
+                console.error('Error sending notification:', error);
+                alert('Error sending notification. Please try again.');
+            }
+        });
+
+        // Password change form
+        document.getElementById('passwordForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (newPassword !== confirmPassword) {
+                alert('New passwords do not match!');
+                return;
+            }
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/admin/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        currentPassword: currentPassword,
+                        newPassword: newPassword,
+                        confirmPassword: confirmPassword
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Password changed successfully!');
+                    this.reset();
+                } else {
+                    const error = await response.json();
+                    alert('Error changing password: ' + error.detail);
+                }
+            } catch (error) {
+                console.error('Error changing password:', error);
+                alert('Error changing password. Please try again.');
+            }
+        });
+
+        // Email settings form
+        document.getElementById('emailForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Email settings saved successfully!');
+        });
+
+        // Utility functions
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                window.location.href = 'login.html';
+            }
+        }
+
+        function exportUsers() {
+            alert('User data exported successfully!');
+        }
+
+        function exportAgendas() {
+            alert('Agenda data exported successfully!');
+        }
+
+        function filterAgendas() {
+            const userFilter = document.getElementById('userFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+            const dateFilter = document.getElementById('dateFilter').value;
+            
+            alert(`Filters applied:\nUser: ${userFilter || 'All'}\nStatus: ${statusFilter || 'All'}\nDate: ${dateFilter || 'All'}`);
+        }
+
+        function clearFilters() {
+            document.getElementById('userFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('dateFilter').value = '';
+            alert('Filters cleared!');
+        }
+
+        function viewNotificationHistory() {
+            alert('Opening notification history...');
+        }
+
+        function saveSettings() {
+            alert('All settings saved successfully!');
+        }
+
+        // Utility functions for user management
+        function banUser(userId) {
+            if (confirm('Are you sure you want to ban this user?')) {
+                alert('User banned successfully!');
+            }
+        }
+
+        function resetPassword(userId) {
+            if (confirm('Are you sure you want to reset this user\'s password?')) {
+                alert('Password reset successfully!');
+            }
+        }
+
+        function viewUserDetails(userId) {
+            alert('Viewing user details for ID: ' + userId);
+        }
+
+        function viewAgenda(agendaId) {
+            alert('Viewing agenda details for ID: ' + agendaId);
+        }
+
+        function flagAgenda(agendaId) {
+            if (confirm('Are you sure you want to flag this agenda?')) {
+                alert('Agenda flagged successfully!');
+            }
+        }
+
+        function deleteAgenda(agendaId) {
+            if (confirm('Are you sure you want to delete this agenda?')) {
+                alert('Agenda deleted successfully!');
+            }
+        }
+
+        // Initialize dashboard on page load
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🚀 SAdashboard page loaded');
+            
+            // Debug localStorage contents
+            console.log('🔍 localStorage token:', localStorage.getItem('token') ? 'Present' : 'Missing');
+            console.log('🔍 localStorage user:', localStorage.getItem('user'));
+            
+            // Verify token and user role
+            const isAdmin = await verifyToken();
+            console.log('🔍 Is admin:', isAdmin);
+            
+            if (!isAdmin) {
+                console.log('❌ User is not admin, redirecting to login');
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            console.log('✅ Admin verified, loading dashboard');
+            
+            // Load initial dashboard stats
+            loadAdminStats();
+            
+            // Update stats every 30 seconds
+            setInterval(loadAdminStats, 30000);
+        });
+    </script>
+</body>
+</html> 

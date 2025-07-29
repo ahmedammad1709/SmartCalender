@@ -114,10 +114,15 @@
                 console.log('DEBUG: Registration response data:', data);
                 
                 if (response.ok) {
-                    successMessage.textContent = 'Account created successfully! Redirecting to login...';
+                    successMessage.textContent = 'Verification code sent to your email! Please check your inbox.';
                     errorMessage.textContent = '';
+                    
+                    // Store email for verification page
+                    localStorage.setItem('verificationEmail', email);
+                    
+                    // Redirect to verification page after 2 seconds
                     setTimeout(() => {
-                        window.location.href = '/login.html';
+                        window.location.href = '/verify.html';
                     }, 2000);
                 } else {
                     errorMessage.textContent = data.detail || 'Registration failed';

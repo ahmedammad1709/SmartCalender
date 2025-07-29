@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email - SmartCal</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .auth-container {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .auth-form input {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            text-align: center;
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
+        .auth-form button {
+            padding: 12px;
+            background: #000;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .auth-form button:hover {
+            background: #333;
+        }
+        .auth-links {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .auth-links a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .error-message {
+            color: #dc3545;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .success-message {
+            color: #28a745;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .page-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .page-header h2 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .page-header p {
+            color: #666;
+            font-size: 14px;
+        }
+        .verification-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .verification-info p {
+            margin: 0;
+            color: #666;
+            font-size: 14px;
+        }
+        .resend-section {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .resend-section button {
+            background: none;
+            border: none;
+            color: #007bff;
+            text-decoration: underline;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .resend-section button:hover {
+            color: #0056b3;
+        }
+        .resend-section button:disabled {
+            color: #6c757d;
+            cursor: not-allowed;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="page-header">
+            <h2>Verify Your Email</h2>
+            <p>We've sent a verification code to your email address.</p>
+        </div>
+        
+        <div class="verification-info">
+            <p id="emailDisplay">Loading...</p>
+        </div>
+        
+        <form class="auth-form" id="verifyForm">
+            <input type="text" id="verificationCode" placeholder="Enter 6-digit code" maxlength="6" required>
+            <button type="submit">Verify & Create Account</button>
+        </form>
+        
+        <div class="error-message" id="errorMessage"></div>
+        <div class="success-message" id="successMessage"></div>
+        
+        <div class="resend-section">
+            <button type="button" id="resendButton" onclick="resendCode()">Resend Code</button>
+            <span id="resendTimer" style="display: none; color: #666; font-size: 14px;"></span>
+        </div>
+        
+        <div class="auth-links">
+            <a href="login.html">Back to Login</a>
+        </div>
+    </div>
+
+    <script>
+        let resendTimer;
+        let resendCountdown = 60; // 60 seconds cooldown
+        
+        // Load email from localStorage
+        const email = localStorage.getItem('verificationEmail');
+        if (email) {
+            document.getElementById('emailDisplay').textContent = email;
+        } else {
+            // If no email found, redirect back to register
+            window.location.href = '/register.html';
+        }
+        
+        // Auto-focus on verification code input
+        document.getElementById('verificationCode').focus();
+        
+        // Auto-format verification code (add spaces)
+        document.getElementById('verificationCode').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+            if (value.length > 6) {
+                value = value.substring(0, 6);
+            }
+            e.target.value = value;
+        });
+        
+        document.getElementById('verifyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const code = document.getElementById('verificationCode').value;
+            const errorMessage = document.getElementById('errorMessage');
+            const successMessage = document.getElementById('successMessage');
+            
+            // Clear previous messages
+            errorMessage.textContent = '';
+            successMessage.textContent = '';
+            
+            if (!code || code.length !== 6) {
+                errorMessage.textContent = 'Please enter a valid 6-digit verification code.';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/users/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        code: code
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    successMessage.textContent = 'Account created successfully! Redirecting to login...';
+                    errorMessage.textContent = '';
+                    
+                    // Clear stored email
+                    localStorage.removeItem('verificationEmail');
+                    
+                    // Redirect to login page after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = '/login.html';
+                    }, 2000);
+                } else {
+                    errorMessage.textContent = data.detail || 'Verification failed';
+                    successMessage.textContent = '';
+                }
+            } catch (error) {
+                console.error('Verification error:', error);
+                errorMessage.textContent = 'Network error. Please try again.';
+                successMessage.textContent = '';
+            }
+        });
+        
+        function resendCode() {
+            const resendButton = document.getElementById('resendButton');
+            const resendTimerSpan = document.getElementById('resendTimer');
+            
+            // Disable resend button and start countdown
+            resendButton.disabled = true;
+            resendCountdown = 60;
+            
+            resendTimerSpan.style.display = 'inline';
+            resendTimerSpan.textContent = `Resend available in ${resendCountdown}s`;
+            
+            resendTimer = setInterval(() => {
+                resendCountdown--;
+                resendTimerSpan.textContent = `Resend available in ${resendCountdown}s`;
+                
+                if (resendCountdown <= 0) {
+                    clearInterval(resendTimer);
+                    resendButton.disabled = false;
+                    resendTimerSpan.style.display = 'none';
+                }
+            }, 1000);
+            
+            // Send resend request
+            fetch('/users/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: 'Resend Request',
+                    email: email,
+                    alias: 'resend',
+                    password: 'resend'
+                })
+            }).then(response => response.json())
+            .then(data => {
+                if (response.ok) {
+                    alert('New verification code sent to your email!');
+                } else {
+                    alert('Failed to resend code. Please try again.');
+                }
+            }).catch(error => {
+                console.error('Resend error:', error);
+                alert('Failed to resend code. Please try again.');
+            });
+        }
+    </script>
+</body>
+</html> 

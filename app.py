@@ -1,21 +1,88 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, render_template, session, redirect, url_for
 from flask_cors import CORS
+from flask_mail import Mail, Message
 import sqlite3
 import bcrypt
 import jwt
 import datetime
 import os
 import json
+import random
+import string
 from functools import wraps
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'ttorfidoo001@gmail.com'
+app.config['MAIL_PASSWORD'] = 'eole tcbx joek wouf'
+app.config['MAIL_DEFAULT_SENDER'] = 'ttorfidoo001@gmail.com'
+
+mail = Mail(app)
 CORS(app)
+
+# In-memory storage for verification codes (in production, use Redis or database)
+verification_codes = {}
+
+def generate_verification_code():
+    """Generate a 6-digit verification code"""
+    return ''.join(random.choices(string.digits, k=6))
+
+def send_verification_email(email, code):
+    """Send verification email using Flask-Mail"""
+    try:
+        msg = Message(
+            subject='SmartCal - Email Verification',
+            recipients=[email],
+            body=f'''
+Hello!
+
+Thank you for signing up for SmartCal. Please use the following verification code to complete your registration:
+
+{code}
+
+This code will expire in 5 minutes.
+
+If you didn't create an account with SmartCal, please ignore this email.
+
+Best regards,
+The SmartCal Team
+            ''',
+            html=f'''
+<html>
+<body>
+    <h2>SmartCal - Email Verification</h2>
+    <p>Hello!</p>
+    <p>Thank you for signing up for SmartCal. Please use the following verification code to complete your registration:</p>
+    <h3 style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; font-size: 24px; letter-spacing: 5px;">{code}</h3>
+    <p><strong>This code will expire in 5 minutes.</strong></p>
+    <p>If you didn't create an account with SmartCal, please ignore this email.</p>
+    <br>
+    <p>Best regards,<br>The SmartCal Team</p>
+</body>
+</html>
+            '''
+        )
+        mail.send(msg)
+        return True
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        return False
 
 # Database initialization
 def init_db():
     conn = sqlite3.connect('smartcal.db')
     cursor = conn.cursor()
+    
+    # Check if role column exists, if not add it
+    cursor.execute("PRAGMA table_info(users)")
+    columns = [column[1] for column in cursor.fetchall()]
+    
+    if 'role' not in columns:
+        cursor.execute('ALTER TABLE users ADD COLUMN role TEXT DEFAULT "user"')
+    
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -23,6 +90,7 @@ def init_db():
             email TEXT UNIQUE NOT NULL,
             alias TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
+            role TEXT DEFAULT "user",
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -105,9 +173,17 @@ def login_page():
 def register_page():
     return send_from_directory('.', 'register.html')
 
+@app.route('/verify.html')
+def verify_page():
+    return send_from_directory('.', 'verify.html')
+
 @app.route('/dashboard.html')
 def dashboard_page():
     return send_from_directory('.', 'dashboard.html')
+
+@app.route('/SAdashboard.html')
+def sa_dashboard_page():
+    return send_from_directory('.', 'SAdashboard.html')
 
 @app.route('/forgot-password.html')
 def forgot_password_page():
@@ -134,21 +210,95 @@ def register():
         if not all([name, email, alias, password]):
             return jsonify({'detail': 'All fields are required'}), 400
         
-        # Hash password
-        password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        # Check if email already exists
+        conn = sqlite3.connect('smartcal.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT id FROM users WHERE email = ? OR alias = ?', (email, alias))
+        existing_user = cursor.fetchone()
+        conn.close()
         
+        if existing_user:
+            return jsonify({'detail': 'Email or alias already exists'}), 400
+        
+        # Generate verification code
+        verification_code = generate_verification_code()
+        
+        # Store user data and verification code temporarily
+        verification_codes[email] = {
+            'code': verification_code,
+            'timestamp': datetime.datetime.now(),
+            'user_data': {
+                'name': name,
+                'email': email,
+                'alias': alias,
+                'password': password
+            }
+        }
+        
+        # Send verification email
+        if send_verification_email(email, verification_code):
+            return jsonify({
+                'message': 'Verification code sent to your email',
+                'email': email
+            }), 200
+        else:
+            return jsonify({'detail': 'Failed to send verification email'}), 500
+            
+    except Exception as e:
+        return jsonify({'detail': str(e)}), 500
+
+@app.route('/users/verify', methods=['POST'])
+def verify_code():
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        code = data.get('code')
+        
+        if not email or not code:
+            return jsonify({'detail': 'Email and verification code are required'}), 400
+        
+        # Check if verification code exists and is valid
+        if email not in verification_codes:
+            return jsonify({'detail': 'No verification code found for this email'}), 400
+        
+        stored_data = verification_codes[email]
+        stored_code = stored_data['code']
+        timestamp = stored_data['timestamp']
+        
+        # Check if code has expired (5 minutes)
+        time_diff = datetime.datetime.now() - timestamp
+        if time_diff.total_seconds() > 300:  # 5 minutes = 300 seconds
+            # Remove expired code
+            del verification_codes[email]
+            return jsonify({'detail': 'Verification code has expired. Please sign up again.'}), 400
+        
+        # Check if code matches
+        if code != stored_code:
+            return jsonify({'detail': 'Invalid verification code'}), 400
+        
+        # Code is valid, create the user account
+        user_data = stored_data['user_data']
+        
+        # Hash password
+        password_hash = bcrypt.hashpw(user_data['password'].encode('utf-8'), bcrypt.gensalt())
+        
+        # Save user to database
         conn = sqlite3.connect('smartcal.db')
         cursor = conn.cursor()
         
         try:
             cursor.execute('''
-                INSERT INTO users (name, email, alias, password_hash)
-                VALUES (?, ?, ?, ?)
-            ''', (name, email, alias, password_hash))
+                INSERT INTO users (name, email, alias, password_hash, role)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (user_data['name'], user_data['email'], user_data['alias'], password_hash, 'user'))
             conn.commit()
             conn.close()
             
-            return jsonify({'message': 'User registered successfully'}), 201
+            # Remove verification code from memory
+            del verification_codes[email]
+            
+            return jsonify({'message': 'Account created successfully'}), 201
+            
         except sqlite3.IntegrityError:
             conn.close()
             return jsonify({'detail': 'Email or alias already exists'}), 400
@@ -173,22 +323,30 @@ def login():
         conn.close()
         
         if user and bcrypt.checkpw(password.encode('utf-8'), user[4]):
+            user_role = user[6] if len(user) > 6 else 'user'
+            
             token = jwt.encode({
                 'user_id': user[0],
                 'email': user[2],
+                'role': user_role,
                 'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
             }, app.config['SECRET_KEY'], algorithm="HS256")
             
-            return jsonify({
+            response_data = {
                 'access_token': token,
                 'token_type': 'bearer',
                 'user': {
                     'id': user[0],
                     'name': user[1],
                     'email': user[2],
-                    'alias': user[3]
+                    'alias': user[3],
+                    'role': user_role
                 }
-            }), 200
+            }
+            
+            print(f"🔐 Login successful for {user[2]} with role: {user_role}")
+            
+            return jsonify(response_data), 200
         else:
             return jsonify({'detail': 'Invalid email or password'}), 401
             
@@ -201,17 +359,20 @@ def get_user_info(current_user):
     try:
         conn = sqlite3.connect('smartcal.db')
         cursor = conn.cursor()
-        cursor.execute('SELECT id, name, email, alias FROM users WHERE id = ?', (current_user,))
+        cursor.execute('SELECT id, name, email, alias, role FROM users WHERE id = ?', (current_user,))
         user = cursor.fetchone()
         conn.close()
         
         if user:
-            return jsonify({
+            user_data = {
                 'id': user[0],
                 'name': user[1],
                 'email': user[2],
-                'alias': user[3]
-            }), 200
+                'alias': user[3],
+                'role': user[4] if len(user) > 4 else 'user'
+            }
+            print(f"👤 User info requested for ID {current_user}")
+            return jsonify(user_data), 200
         else:
             return jsonify({'detail': 'User not found'}), 404
             
@@ -423,6 +584,255 @@ def save_user_availability(current_user):
         conn.close()
         
         return jsonify({'message': 'Availability saved successfully'}), 200
+        
+    except Exception as e:
+        return jsonify({'detail': str(e)}), 500
+
+# Super Admin API Endpoints
+@app.route('/admin/stats', methods=['GET'])
+@token_required
+def get_admin_stats(current_user):
+    """Get admin dashboard statistics"""
+    try:
+        print(f"🔍 Admin stats requested for user ID: {current_user}")
+        
+        conn = sqlite3.connect('smartcal.db')
+        cursor = conn.cursor()
+        
+        # Get total users
+        cursor.execute('SELECT COUNT(*) FROM users')
+        total_users = cursor.fetchone()[0]
+        
+        # Get total agendas
+        cursor.execute('SELECT COUNT(*) FROM agendas')
+        total_agendas = cursor.fetchone()[0]
+        
+        # Get pending verifications (users created today)
+        cursor.execute('SELECT COUNT(*) FROM users WHERE DATE(created_at) = DATE("now")')
+        pending_verifications = cursor.fetchone()[0]
+        
+        # Get last broadcast sent (placeholder for now)
+        last_broadcast = "Jul 25, 2024"
+        
+        conn.close()
+        
+        stats = {
+            'totalUsers': total_users,
+            'totalAgendas': total_agendas,
+            'pendingVerifications': pending_verifications,
+            'lastBroadcast': last_broadcast
+        }
+        
+        print(f"📊 Admin stats: {stats}")
+        return jsonify(stats), 200
+        
+    except Exception as e:
+        print(f"❌ Error in admin stats: {e}")
+        return jsonify({'detail': str(e)}), 500
+
+@app.route('/admin/users', methods=['GET'])
+@token_required
+def get_all_users(current_user):
+    """Get all users for admin management"""
+    try:
+        conn = sqlite3.connect('smartcal.db')
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT id, name, email, alias, role, created_at 
+            FROM users 
+            ORDER BY created_at DESC
+        ''')
+        users = cursor.fetchall()
+        conn.close()
+        
+        user_list = []
+        for user in users:
+            # Determine status based on creation date
+            status = "Active" if user[5] else "Pending"
+            
+            user_list.append({
+                'id': user[0],
+                'name': user[1],
+                'email': user[2],
+                'username': user[3],
+                'role': user[4],
+                'status': status,
+                'createdAt': user[5]
+            })
+        
+        return jsonify(user_list), 200
+        
+    except Exception as e:
+        return jsonify({'detail': str(e)}), 500
+
+@app.route('/admin/agendas', methods=['GET'])
+@token_required
+def get_all_agendas(current_user):
+    """Get all agendas for admin management"""
+    try:
+        conn = sqlite3.connect('smartcal.db')
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT a.id, a.title, a.alias_name, a.duration, a.max_bookings_per_day, 
+                   a.created_at, u.name as creator_name, u.alias as creator_alias
+            FROM agendas a
+            JOIN users u ON a.user_id = u.id
+            ORDER BY a.created_at DESC
+        ''')
+        agendas = cursor.fetchall()
+        conn.close()
+        
+        agenda_list = []
+        for agenda in agendas:
+            agenda_list.append({
+                'id': agenda[0],
+                'title': agenda[1],
+                'aliasName': agenda[2],
+                'duration': agenda[3],
+                'maxBookingsPerDay': agenda[4],
+                'createdAt': agenda[5],
+                'creatorName': agenda[6],
+                'creatorAlias': agenda[7]
+            })
+        
+        return jsonify(agenda_list), 200
+        
+    except Exception as e:
+        return jsonify({'detail': str(e)}), 500
+
+@app.route('/admin/notifications', methods=['POST'])
+@token_required
+def send_notification(current_user):
+    """Send notification to users"""
+    try:
+        data = request.get_json()
+        subject = data.get('subject')
+        message = data.get('message')
+        recipients = data.get('recipients', 'all')
+        selected_users = data.get('selectedUsers', [])
+        urgent = data.get('urgent', False)
+        
+        if not subject or not message:
+            return jsonify({'detail': 'Subject and message are required'}), 400
+        
+        conn = sqlite3.connect('smartcal.db')
+        cursor = conn.cursor()
+        
+        # Create notifications table if it doesn't exist
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS notifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                subject TEXT NOT NULL,
+                message TEXT NOT NULL,
+                recipients TEXT NOT NULL,
+                urgent BOOLEAN DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # Insert notification
+        cursor.execute('''
+            INSERT INTO notifications (subject, message, recipients, urgent)
+            VALUES (?, ?, ?, ?)
+        ''', (subject, message, recipients, urgent))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'message': 'Notification sent successfully'}), 200
+        
+    except Exception as e:
+        return jsonify({'detail': str(e)}), 500
+
+@app.route('/admin/change-password', methods=['POST'])
+@token_required
+def change_admin_password(current_user):
+    """Change admin password"""
+    try:
+        data = request.get_json()
+        current_password = data.get('currentPassword')
+        new_password = data.get('newPassword')
+        confirm_password = data.get('confirmPassword')
+        
+        if not all([current_password, new_password, confirm_password]):
+            return jsonify({'detail': 'All password fields are required'}), 400
+        
+        if new_password != confirm_password:
+            return jsonify({'detail': 'New passwords do not match'}), 400
+        
+        conn = sqlite3.connect('smartcal.db')
+        cursor = conn.cursor()
+        
+        # Get current user's password hash
+        cursor.execute('SELECT password_hash FROM users WHERE id = ?', (current_user,))
+        user = cursor.fetchone()
+        
+        if not user:
+            conn.close()
+            return jsonify({'detail': 'User not found'}), 404
+        
+        # Verify current password
+        if not bcrypt.checkpw(current_password.encode('utf-8'), user[0]):
+            conn.close()
+            return jsonify({'detail': 'Current password is incorrect'}), 400
+        
+        # Hash new password
+        new_password_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+        
+        # Update password
+        cursor.execute('UPDATE users SET password_hash = ? WHERE id = ?', (new_password_hash, current_user))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'message': 'Password changed successfully'}), 200
+        
+    except Exception as e:
+        return jsonify({'detail': str(e)}), 500
+
+@app.route('/notifications', methods=['GET'])
+@token_required
+def get_user_notifications(current_user):
+    """Get notifications for current user"""
+    try:
+        conn = sqlite3.connect('smartcal.db')
+        cursor = conn.cursor()
+        
+        # Create notifications table if it doesn't exist
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS notifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                subject TEXT NOT NULL,
+                message TEXT NOT NULL,
+                recipients TEXT NOT NULL,
+                urgent BOOLEAN DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # Get notifications for this user
+        cursor.execute('''
+            SELECT id, subject, message, urgent, created_at
+            FROM notifications 
+            WHERE recipients = 'all' OR recipients LIKE ?
+            ORDER BY created_at DESC
+        ''', (f'%{current_user}%',))
+        
+        notifications = cursor.fetchall()
+        conn.close()
+        
+        notification_list = []
+        for notification in notifications:
+            notification_list.append({
+                'id': notification[0],
+                'subject': notification[1],
+                'message': notification[2],
+                'urgent': bool(notification[3]),
+                'createdAt': notification[4]
+            })
+        
+        return jsonify(notification_list), 200
         
     except Exception as e:
         return jsonify({'detail': str(e)}), 500
