@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Portfolio - Booking Page</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f8f9fa; }
+        .portfolio-container {
+            max-width: 600px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+            padding: 32px 18px 24px 18px;
+        }
+        .user-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        .user-header h2 {
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        .agenda-list {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .agenda-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+            padding: 18px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .agenda-title {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #333;
+        }
+        .agenda-duration {
+            color: #6c757d;
+            font-size: 0.98rem;
+        }
+        .agenda-description {
+            color: #555;
+            font-size: 0.97rem;
+        }
+        .book-btn {
+            align-self: flex-end;
+            margin-top: 8px;
+        }
+        @media (max-width: 600px) {
+            .portfolio-container { padding: 18px 4px; }
+            .agenda-card { padding: 14px 8px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="portfolio-container">
+        <div class="user-header">
+            <h2 id="userName">User Name</h2>
+            <p class="text-muted mb-0" id="userEmail"></p>
+        </div>
+        <div id="agendaList" class="agenda-list">
+            <!-- Agendas will be loaded here -->
+        </div>
+        <div id="noAgendasMsg" class="text-center text-muted mt-4" style="display:none;">No agendas found for this user.</div>
+    </div>
+
+    <script>
+    // --- DYNAMIC DATA LOADING (to be replaced with real API calls) ---
+    // Example: fetch user/agenda info from URL params or backend
+    document.addEventListener('DOMContentLoaded', async function() {
+        // Get user alias or id from URL (e.g., ?user=2 or ?alias=ahmed)
+        const params = new URLSearchParams(window.location.search);
+        const userId = params.get('userId');
+        const userAlias = params.get('alias');
+
+        // Simulate fetching user info and agendas (replace with real fetch)
+        // For now, use localStorage user if available
+        let user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (!userId && !userAlias && !user.id) {
+            document.getElementById('userName').textContent = 'User Not Found';
+            document.getElementById('agendaList').style.display = 'none';
+            document.getElementById('noAgendasMsg').style.display = 'block';
+            return;
+        }
+
+        // If not in localStorage, fetch from backend (pseudo-code)
+        // let user = await fetchUser(userId || userAlias);
+
+        document.getElementById('userName').textContent = user.name || user.alias || 'User';
+        document.getElementById('userEmail').textContent = user.email || '';
+
+        // Fetch agendas for this user (simulate for now)
+        let agendas = [];
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch('/agendas/', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                agendas = await response.json();
+            }
+        } catch (e) {}
+
+        const agendaList = document.getElementById('agendaList');
+        agendaList.innerHTML = '';
+        if (!agendas || agendas.length === 0) {
+            document.getElementById('noAgendasMsg').style.display = 'block';
+            return;
+        }
+        document.getElementById('noAgendasMsg').style.display = 'none';
+        agendas.forEach(agenda => {
+            const card = document.createElement('div');
+            card.className = 'agenda-card';
+            card.innerHTML = `
+                <div class="agenda-title">${agenda.title}</div>
+                <div class="agenda-duration">Duration: ${agenda.duration} min</div>
+                <div class="agenda-description">${agenda.description ? agenda.description : ''}</div>
+                <a href="agenda_booking_link.html?user=${encodeURIComponent(user.name)}&agenda=${encodeURIComponent(agenda.title)}&duration=${encodeURIComponent(agenda.duration)}" class="btn btn-primary btn-sm book-btn">Book Now</a>
+            `;
+            agendaList.appendChild(card);
+        });
+    });
+    </script>
+</body>
+</html> 

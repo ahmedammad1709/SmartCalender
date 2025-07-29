@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book a Meeting</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f8f9fa; }
+        .booking-container {
+            max-width: 500px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+            padding: 32px 24px;
+        }
+        .agenda-title { font-size: 1.3rem; font-weight: 600; }
+        .user-name { color: #555; font-size: 1.1rem; }
+        .duration { color: #888; font-size: 1rem; }
+        .slot-btn { margin: 0 6px 8px 0; }
+        .slot-btn.selected { background: #0d6efd; color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="booking-container">
+        <div class="mb-4 text-center">
+            <h4 class="text-muted mb-2">Book a Meeting With</h4>
+            <div class="user-name" id="userName">User Name</div>
+            <hr class="my-3">
+            <div class="agenda-title" id="agendaTitle">Agenda Title</div>
+            <div class="duration" id="meetingDuration">Duration: 30 min</div>
+        </div>
+        <form id="bookingForm">
+            <div class="mb-3">
+                <label for="visitorName" class="form-label">📝 Your Name</label>
+                <input type="text" class="form-control" id="visitorName" placeholder="Enter your full name" required>
+            </div>
+            <div class="mb-3">
+                <label for="visitorEmail" class="form-label">📧 Your Email</label>
+                <input type="email" class="form-control" id="visitorEmail" placeholder="Enter your email address" required>
+            </div>
+            <div class="mb-3">
+                <label for="meetingDate" class="form-label">📅 Select Meeting Date</label>
+                <input type="date" class="form-control" id="meetingDate" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">⏰ Choose Available Time Slot</label>
+                <div id="timeSlots" class="d-flex flex-wrap">
+                    <!-- Time slot buttons will be injected here -->
+                </div>
+                <input type="hidden" id="selectedTime" name="selectedTime" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Book Meeting</button>
+        </form>
+        <div id="bookingSuccess" class="alert alert-success mt-3 d-none">Booking successful! Check your email for details.</div>
+        <div id="bookingError" class="alert alert-danger mt-3 d-none">Booking failed. Please try again.</div>
+    </div>
+
+    <script>
+    // --- DYNAMIC DATA LOADING (to be replaced with real API calls) ---
+            // Example: fetch user/agenda info from URL params or backend
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get data from URL parameters
+            const params = new URLSearchParams(window.location.search);
+            const user = params.get('user') || 'John Doe';
+            const agenda = params.get('agenda') || 'Consultation Call';
+            const duration = params.get('duration') || '30';
+            
+            // Update the page content with clear labels
+            document.getElementById('userName').textContent = user;
+            document.getElementById('agendaTitle').textContent = agenda;
+            document.getElementById('meetingDuration').textContent = `Duration: ${duration} min`;
+            
+            // Update page title
+            document.title = `Book with ${user} - ${agenda}`;
+
+        // Simulate available slots (replace with real fetch)
+        const slots = ['10:00 AM', '10:30 AM', '11:00 AM', '2:00 PM', '2:30 PM'];
+        const timeSlotsDiv = document.getElementById('timeSlots');
+        slots.forEach(slot => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-outline-primary slot-btn';
+            btn.textContent = slot;
+            btn.onclick = function() {
+                document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                document.getElementById('selectedTime').value = slot;
+            };
+            timeSlotsDiv.appendChild(btn);
+        });
+    });
+
+    // --- Booking Form Submission ---
+    document.getElementById('bookingForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        // TODO: Send booking data to backend
+        // For now, just show success
+        document.getElementById('bookingSuccess').classList.remove('d-none');
+        document.getElementById('bookingError').classList.add('d-none');
+        this.reset();
+        document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+    });
+    </script>
+</body>
+</html> 

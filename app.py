@@ -189,6 +189,14 @@ def dashboard_page():
 def sa_dashboard_page():
     return send_from_directory('.', 'SAdashboard.html')
 
+@app.route('/agenda_booking_link.html')
+def agenda_booking_link():
+    return send_from_directory('.', 'agenda_booking_link.html')
+
+@app.route('/booking_page.html')
+def booking_page():
+    return send_from_directory('.', 'booking_page.html')
+
 @app.route('/forgot-password.html')
 def forgot_password_page():
     return send_from_directory('.', 'forgot-password.html')
@@ -612,8 +620,12 @@ def get_admin_stats(current_user):
         cursor.execute('SELECT COUNT(*) FROM users')
         total_users = cursor.fetchone()[0]
         
-        # Get total agendas
-        cursor.execute('SELECT COUNT(*) FROM agendas')
+        # Get total agendas (only valid ones with existing users)
+        cursor.execute('''
+            SELECT COUNT(*) 
+            FROM agendas a
+            JOIN users u ON a.user_id = u.id
+        ''')
         total_agendas = cursor.fetchone()[0]
         
         # Get pending verifications (users created today)

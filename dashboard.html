@@ -237,6 +237,104 @@
             border-collapse: collapse;
             margin-top: 15px;
         }
+        
+        /* Booking Link Cards Styling */
+        .booking-link-card {
+            background: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+        
+        .booking-link-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .booking-link-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .booking-link-info {
+            flex: 1;
+        }
+        
+        .booking-title {
+            margin: 0 0 4px 0;
+            color: #2c3e50;
+            font-weight: 600;
+            font-size: 18px;
+        }
+        
+        .booking-duration {
+            color: #6c757d;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .booking-link-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .copy-btn {
+            padding: 6px 10px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        
+        .copy-btn:hover {
+            background-color: #6c757d;
+            color: white;
+            border-color: #6c757d;
+        }
+        
+        .copy-btn i {
+            font-size: 12px;
+        }
+        
+        /* Toast Notifications */
+        .toast-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 9999;
+            animation: slideIn 0.3s ease;
+        }
+        
+        .toast-notification.success {
+            background-color: #28a745;
+        }
+        
+        .toast-notification.error {
+            background-color: #dc3545;
+        }
+        
+        .toast-notification.info {
+            background-color: #17a2b8;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
         .meetings-table th,
         .meetings-table td {
             padding: 12px;
@@ -1299,65 +1397,7 @@
             }
         }
 
-        // Load booking links
-        async function loadBookingLinks() {
-            try {
-                const response = await fetch('/agendas/', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                
-                if (response.ok) {
-                    const agendas = await response.json();
-                    const linksContainer = document.getElementById('bookingLinks');
-                    
-                    if (agendas.length === 0) {
-                        linksContainer.innerHTML = '<p>No booking pages created yet. Create an agenda to get started!</p>';
-                    } else {
-                        let linksHtml = '';
-                        agendas.forEach(agenda => {
-                            const bookingUrl = `${window.location.origin}/agendas/public/${agenda.alias_name}`;
-                            linksHtml += `
-                                <div style="margin-bottom: 15px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
-                                    <strong>${agenda.alias_name}</strong><br>
-                                    <a href="${bookingUrl}" target="_blank">${bookingUrl}</a>
-                                </div>
-                            `;
-                        });
-                        linksContainer.innerHTML = linksHtml;
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading booking links:', error);
-            }
-        }
 
-        // Load booking page section
-        async function loadBookingPage() {
-            try {
-                const user = JSON.parse(localStorage.getItem('user') || '{}');
-                const bookingPageSection = document.getElementById('bookingPageSection');
-                
-                if (user.alias) {
-                    const bookingUrl = `smartcal.one/${user.alias}`;
-                    bookingPageSection.innerHTML = `
-                        <div class="booking-page-section">
-                            <strong>🌐 Your Booking Page: ${bookingUrl}</strong>
-                            <div class="booking-url">${bookingUrl}</div>
-                            <div class="booking-actions">
-                                <button class="btn-secondary" onclick="copyBookingLink('${bookingUrl}')">Copy Link</button>
-                                <button class="btn-secondary" onclick="previewBookingPage('${bookingUrl}')">Preview</button>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    bookingPageSection.innerHTML = '<p>No booking pages created yet. Create an agenda to get started!</p>';
-                }
-            } catch (error) {
-                console.error('Error loading booking page:', error);
-            }
-        }
 
         // Load upcoming meetings
         async function loadUpcomingMeetings() {
@@ -1846,13 +1886,115 @@
             }
         }
 
+        // Show/hide booking page section based on user's agendas
+        async function updateBookingPageSection() {
+            const section = document.getElementById('bookingPageSection');
+            section.innerHTML = '<p>Loading your booking page...</p>';
+            section.parentElement.style.display = 'block';
+            try {
+                const user = JSON.parse(localStorage.getItem('user'));
+                if (!user) {
+                    section.innerHTML = '<p>Please log in to view your booking page.</p>';
+                    return;
+                }
+                // Use userId or alias for the portfolio link
+                const portfolioUrl = user.id
+                    ? `booking_page.html?userId=${encodeURIComponent(user.id)}`
+                    : user.alias
+                        ? `booking_page.html?alias=${encodeURIComponent(user.alias)}`
+                        : 'booking_page.html';
+                section.innerHTML = `<a href="${portfolioUrl}" target="_blank" class="btn btn-outline-primary">View Your Booking Page (Portfolio)</a><br><small>This is your public portfolio page. Share this link to let others see all your meeting types.</small>`;
+            } catch (e) {
+                console.error('❌ Error in updateBookingPageSection:', e);
+                section.innerHTML = '<p>Error loading your booking page.</p>';
+            }
+        }
+
+        // Show public booking links for each agenda
+        async function updateBookingLinksSection() {
+            const section = document.getElementById('bookingLinks');
+            section.innerHTML = '<p>Loading your booking links...</p>';
+            try {
+                const token = localStorage.getItem('token');
+                const user = JSON.parse(localStorage.getItem('user'));
+                if (!user) {
+                    section.innerHTML = '<p>Please log in to view your booking links.</p>';
+                    return;
+                }
+                const response = await fetch('/agendas/', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) {
+                    section.innerHTML = '<p>Error loading your agendas.</p>';
+                    return;
+                }
+                const agendas = await response.json();
+                console.log('📋 Loaded agendas:', agendas); // Debug log
+                
+                if (agendas.length === 0) {
+                    section.innerHTML = '<p>You have not created any booking pages yet. Create one under Manage Agendas.</p>';
+                    return;
+                }
+                let html = '';
+                agendas.forEach(agenda => {
+                    console.log('📋 Processing agenda:', agenda); // Debug log
+                    const bookingUrl = `agenda_booking_link.html?user=${encodeURIComponent(user.name)}&agenda=${encodeURIComponent(agenda.title)}&duration=${encodeURIComponent(agenda.duration)}`;
+                    const fullUrl = `${window.location.origin}/${bookingUrl}`;
+                    html += `
+                        <div class='booking-link-card'>
+                            <div class='booking-link-content'>
+                                <div class='booking-link-info'>
+                                    <h5 class='booking-title'>${agenda.title}</h5>
+                                    <span class='booking-duration'>${agenda.duration} min meeting</span>
+                                </div>
+                                <div class='booking-link-actions'>
+                                    <a href='${bookingUrl}' target='_blank' class='btn btn-primary btn-sm'>View Booking Page</a>
+                                    <button class='btn btn-outline-secondary btn-sm copy-btn' onclick='copyToClipboard("${fullUrl}")' title='Copy booking link'>
+                                        <i class='fas fa-copy'></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                section.innerHTML = html;
+            } catch (e) {
+                console.error('❌ Error in updateBookingLinksSection:', e);
+                section.innerHTML = '<p>Error loading your booking links.</p>';
+            }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                // Show a nice toast notification instead of alert
+                showToast('Link copied to clipboard!', 'success');
+            }, function() {
+                showToast('Failed to copy link.', 'error');
+            });
+        }
+        
+        function showToast(message, type = 'info') {
+            // Create toast element
+            const toast = document.createElement('div');
+            toast.className = `toast-notification ${type}`;
+            toast.textContent = message;
+            
+            // Add to page
+            document.body.appendChild(toast);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
         // Initialize dashboard
         loadUserInfo();
-        loadBookingLinks();
-        loadBookingPage();
         loadUpcomingMeetings();
         loadUserPreferences();
         loadNotifications();
+        updateBookingPageSection(); // Call this function on page load
+        updateBookingLinksSection(); // Call this function on page load
         
         // Add event listener for daily email checkbox
         document.getElementById('dailyEmail').addEventListener('change', toggleSendTimeVisibility);
