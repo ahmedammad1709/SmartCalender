@@ -12,13 +12,17 @@ import string
 from functools import wraps
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-here'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here-change-in-production')
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = 'ttorfidoo001@gmail.com'
 app.config['MAIL_PASSWORD'] = 'eole tcbx joek wouf'
 app.config['MAIL_DEFAULT_SENDER'] = 'ttorfidoo001@gmail.com'
+
+# Production settings
+if not app.debug:
+    app.config['PREFERRED_URL_SCHEME'] = 'https'
 
 mail = Mail(app)
 CORS(app)
@@ -247,17 +251,6 @@ def init_db():
     conn = sqlite3.connect('smartcal.db')
     cursor = conn.cursor()
     
-    # Check if role column exists, if not add it
-    cursor.execute("PRAGMA table_info(users)")
-    columns = [column[1] for column in cursor.fetchall()]
-    
-    if 'role' not in columns:
-        cursor.execute('ALTER TABLE users ADD COLUMN role TEXT DEFAULT "user"')
-    
-    # Check if banned column exists, if not add it
-    if 'banned' not in columns:
-        cursor.execute('ALTER TABLE users ADD COLUMN banned BOOLEAN DEFAULT 0')
-    
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -266,9 +259,21 @@ def init_db():
             alias TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             role TEXT DEFAULT "user",
+            banned BOOLEAN DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    
+    # Check if role column exists, if not add it (for existing databases)
+    cursor.execute("PRAGMA table_info(users)")
+    columns = [column[1] for column in cursor.fetchall()]
+    
+    if 'role' not in columns:
+        cursor.execute('ALTER TABLE users ADD COLUMN role TEXT DEFAULT "user"')
+    
+    # Check if banned column exists, if not add it (for existing databases)
+    if 'banned' not in columns:
+        cursor.execute('ALTER TABLE users ADD COLUMN banned BOOLEAN DEFAULT 0')
     
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS user_preferences (
@@ -558,6 +563,7 @@ def login():
 @token_required
 def get_user_info(current_user):
     try:
+        print(f"🔍 /users/me called with current_user ID: {current_user}")
         conn = sqlite3.connect('smartcal.db')
         cursor = conn.cursor()
         cursor.execute('SELECT id, name, email, alias, role FROM users WHERE id = ?', (current_user,))
@@ -572,12 +578,14 @@ def get_user_info(current_user):
                 'alias': user[3],
                 'role': user[4] if len(user) > 4 else 'user'
             }
-            print(f"👤 User info requested for ID {current_user}")
+            print(f"👤 User info for ID {current_user}: {user_data}")
             return jsonify(user_data), 200
         else:
+            print(f"❌ User not found for ID {current_user}")
             return jsonify({'detail': 'User not found'}), 404
             
     except Exception as e:
+        print(f"❌ Error in get_user_info: {e}")
         return jsonify({'detail': str(e)}), 500
 
 @app.route('/agendas/', methods=['GET'])
@@ -1415,6 +1423,217 @@ def get_upcoming_meetings(current_user):
     except Exception as e:
         return jsonify({'detail': str(e)}), 500
 
+@app.route('/admin/verify-password', methods=['POST'])
+@token_required
+def verify_admin_password(current_user):
+    """Verify current admin password before creating new super admin"""
+    try:
+        print(f"🔍 /admin/verify-password called with current_user ID: {current_user}")
+        data = request.get_json()
+        password = data.get('password')
+        
+        if not password:
+            print("❌ Password is required")
+            return jsonify({'detail': 'Password is required'}), 400
+        
+        conn = sqlite3.connect('smartcal.db')
+        cursor = conn.cursor()
+        
+        # Get current user's password hash and role
+        cursor.execute('SELECT password_hash, role FROM users WHERE id = ?', (current_user,))
+        user = cursor.fetchone()
+        
+        if not user:
+            print(f"❌ User not found for ID {current_user}")
+            conn.close()
+            return jsonify({'detail': 'User not found'}), 404
+        
+        print(f"🔍 User role: {user[1]}")
+        
+        # Check if user is admin
+        if user[1] != 'admin':
+            print(f"❌ User is not admin, role: {user[1]}")
+            conn.close()
+            return jsonify({'detail': 'Only admin users can create super admins'}), 403
+        
+        # Verify password
+        password_correct = bcrypt.checkpw(password.encode('utf-8'), user[0])
+        print(f"🔍 Password verification result: {password_correct}")
+        
+        if not password_correct:
+            conn.close()
+            return jsonify({'detail': 'Password is incorrect'}), 400
+        
+        conn.close()
+        print("✅ Password verified successfully")
+        return jsonify({'message': 'Password verified successfully'}), 200
+        
+    except Exception as e:
+        print(f"❌ Error in verify_admin_password: {e}")
+        return jsonify({'detail': str(e)}), 500
+
+@app.route('/admin/create-super-admin', methods=['POST'])
+@token_required
+def create_super_admin(current_user):
+    """Create a new super admin account"""
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+        confirm_password = data.get('confirmPassword')
+        
+        if not all([email, password, confirm_password]):
+            return jsonify({'detail': 'All fields are required'}), 400
+        
+        if password != confirm_password:
+            return jsonify({'detail': 'Passwords do not match'}), 400
+        
+        # Validate email format
+        import re
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, email):
+            return jsonify({'detail': 'Invalid email format'}), 400
+        
+        # Validate password strength
+        if len(password) < 8:
+            return jsonify({'detail': 'Password must be at least 8 characters long'}), 400
+        
+        if not re.search(r'[A-Z]', password):
+            return jsonify({'detail': 'Password must contain at least one uppercase letter'}), 400
+        
+        if not re.search(r'[a-z]', password):
+            return jsonify({'detail': 'Password must contain at least one lowercase letter'}), 400
+        
+        if not re.search(r'\d', password):
+            return jsonify({'detail': 'Password must contain at least one number'}), 400
+        
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+            return jsonify({'detail': 'Password must contain at least one special character'}), 400
+        
+        conn = sqlite3.connect('smartcal.db')
+        cursor = conn.cursor()
+        
+        # Check if email already exists
+        cursor.execute('SELECT id FROM users WHERE email = ?', (email,))
+        if cursor.fetchone():
+            conn.close()
+            return jsonify({'detail': 'Email already exists'}), 400
+        
+        # Generate OTP
+        otp = generate_verification_code()
+        
+        # Store OTP temporarily (in production, use Redis or database with expiry)
+        verification_codes[email] = {
+            'otp': otp,
+            'password': password,
+            'timestamp': datetime.datetime.now()
+        }
+        
+        # Send OTP email
+        try:
+            msg = Message(
+                subject='Your Super Admin OTP',
+                recipients=[email],
+                body=f'''
+Hello!
+
+You are creating a new Super Admin account for SmartCal. Please use the following verification code to complete the process:
+
+{otp}
+
+This code will expire in 5 minutes.
+
+If you didn't request this, please ignore this email.
+
+Best regards,
+The SmartCal Team
+                ''',
+                html=f'''
+<html>
+<body>
+    <h2>SmartCal - Super Admin Verification</h2>
+    <p>Hello!</p>
+    <p>You are creating a new Super Admin account for SmartCal. Please use the following verification code to complete the process:</p>
+    <h3 style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; font-size: 24px; letter-spacing: 5px;">
+        {otp}
+    </h3>
+    <p><strong>This code will expire in 5 minutes.</strong></p>
+    <p>If you didn't request this, please ignore this email.</p>
+    <br>
+    <p>Best regards,<br>The SmartCal Team</p>
+</body>
+</html>
+                '''
+            )
+            mail.send(msg)
+        except Exception as e:
+            print(f"Error sending OTP email: {e}")
+            conn.close()
+            return jsonify({'detail': 'Failed to send OTP email'}), 500
+        
+        conn.close()
+        return jsonify({'message': 'OTP sent successfully'}), 200
+        
+    except Exception as e:
+        return jsonify({'detail': str(e)}), 500
+
+@app.route('/admin/verify-super-admin-otp', methods=['POST'])
+@token_required
+def verify_super_admin_otp(current_user):
+    """Verify OTP and create super admin account"""
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        otp = data.get('otp')
+        
+        if not all([email, otp]):
+            return jsonify({'detail': 'Email and OTP are required'}), 400
+        
+        # Check if OTP exists and is valid
+        if email not in verification_codes:
+            return jsonify({'detail': 'OTP not found or expired'}), 400
+        
+        stored_data = verification_codes[email]
+        stored_otp = stored_data['otp']
+        stored_password = stored_data['password']
+        timestamp = stored_data['timestamp']
+        
+        # Check if OTP is expired (5 minutes)
+        if (datetime.datetime.now() - timestamp).total_seconds() > 300:
+            del verification_codes[email]
+            return jsonify({'detail': 'OTP has expired'}), 400
+        
+        # Verify OTP
+        if otp != stored_otp:
+            return jsonify({'detail': 'Invalid OTP'}), 400
+        
+        conn = sqlite3.connect('smartcal.db')
+        cursor = conn.cursor()
+        
+        # Hash password
+        password_hash = bcrypt.hashpw(stored_password.encode('utf-8'), bcrypt.gensalt())
+        
+        # Create super admin account
+        cursor.execute('''
+            INSERT INTO users (name, email, alias, password_hash, role, created_at)
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ''', (f'Super Admin ({email})', email, f'superadmin_{email.split("@")[0]}', password_hash, 'admin'))
+        
+        conn.commit()
+        conn.close()
+        
+        # Clean up OTP
+        del verification_codes[email]
+        
+        return jsonify({'message': 'Super Admin created successfully'}), 200
+        
+    except Exception as e:
+        return jsonify({'detail': str(e)}), 500
+
 if __name__ == '__main__':
     init_db()
-    app.run(debug=True, port=5000) 
+    # Use environment variable for port or default to 5000
+    port = int(os.environ.get('PORT', 5000))
+    # Only use debug mode in development
+    debug = os.environ.get('FLASK_ENV') == 'development'
+    app.run(debug=debug, host='0.0.0.0', port=port) 
